@@ -44,6 +44,10 @@ install: all
 
 release: fmt vet
 	$Q go build -v -ldflags "-s -w -X main.BuildVersion=$(VERSION) -X main.BuildDate=$(BUILD_DATE)" -o bin/ssp github.com/ripta/ssp
+	$Q codesign -f --deep -s 'Ripta Pasay' bin/ssp
+
+run: fmt
+	$Q go run *.go
 
 test:
 	$Q go test -timeout 20s $(PKGS)
