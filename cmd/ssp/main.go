@@ -23,7 +23,7 @@ func main() {
 		panic(err)
 	}
 
-	log.Debug("Parsed options", zap.String("options", fmt.Sprintf("%+v", opts)))
+	log.Debug("Parsed options", zap.Reflect("options", opts))
 
 	r := mux.NewRouter()
 	r.NotFoundHandler = LoggingHandler(log, http.NotFoundHandler())
