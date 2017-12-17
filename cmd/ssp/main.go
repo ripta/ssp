@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -109,15 +110,20 @@ func (s *responseSizer) WriteHeader(code int) {
 func LoggingHandler(l *zap.Logger, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		s := &responseSizer{w: w}
+		ts := time.Now()
 		h.ServeHTTP(s, r)
+		elapsed := time.Since(ts)
 		l.Info(
-			"request",
+			"Request",
+			zap.String("@tag", "ssp.access"),
 			zap.String("host", getHttpHostname(r.RemoteAddr)),
 			zap.String("username", "-"),
 			zap.String("method", r.Method),
 			zap.String("path", r.RequestURI),
 			zap.Int("status", s.code),
 			zap.Uint64("size", s.size),
+			zap.Duration("duration_human", elapsed),
+			zap.Int64("duration_ns", elapsed.Nanoseconds()),
 		)
 	})
 }
