@@ -26,6 +26,7 @@ type options struct {
 	BucketRegion     string `arg:"--bucket-region,env:SSP_BUCKET_REGION"`
 	BucketTeamPrefix string `arg:"--bucket-team-prefix,env:SSP_BUCKET_TEAM_PREFIX"`
 	BucketUserPrefix string `arg:"--bucket-user-prefix,env:SSP_BUCKET_USER_PREFIX"`
+	Config           string `arg:"--config,env:SSP_CONFIG"`
 	Environment      string `arg:"--env,env:SSP_ENV,help:Environment name 'dev' or 'prod'"`
 	Port             int    `arg:"--port,env:SSP_PORT,help:Port to listen on"`
 }

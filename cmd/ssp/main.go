@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -14,6 +15,10 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/ripta/ssp/server"
+)
+
+var (
+	reVarSubsitution = regexp.MustCompile("\\{[^}]+\\}")
 )
 
 func main() {
@@ -27,10 +32,18 @@ func main() {
 
 	r := mux.NewRouter()
 	r.NotFoundHandler = LoggingHandler(log, http.NotFoundHandler())
-	r.Host("userdir.routed.cloud").PathPrefix("/~{username}/").
-		Handler(LoggingHandler(log, stripPathComponent(1, prependPath("/users/{username}", server.DumpRequestHandler))))
-	r.Host("{username}.userdir.routed.cloud").
-		Handler(LoggingHandler(log, prependPath("/users/{username}", server.DumpRequestHandler)))
+	// r.Host("userdir.routed.cloud").PathPrefix("/~{username}").
+	// 	Handler(LoggingHandler(log, stripPath("/~{username}", prependPath("/users/{username}", server.DumpRequestHandler))))
+	// r.Host("{username}.userdir.routed.cloud").
+	// 	Handler(LoggingHandler(log, prependPath("/users/{username}", server.DumpRequestHandler)))
+
+	if opts.Config != "" {
+		cfg, err := LoadConfig(opts.Config)
+		if err != nil {
+			log.Fatal("Could not load config", zap.String("config_file", opts.Config), zap.Error(err))
+		}
+		cfg.InjectRoutes(r, server.DumpRequestHandler, log)
+	}
 
 	port := strconv.Itoa(opts.Port)
 	log.Info(fmt.Sprintf("Ready to serve requests on port %s", port))
@@ -62,8 +75,29 @@ func prependPath(prefix string, h http.Handler) http.Handler {
 		return h
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		r.URL.Path = prefix + r.URL.Path
+		r.URL.Path = substituteParams(prefix, mux.Vars(r)) + r.URL.Path
 		h.ServeHTTP(w, r)
+	})
+}
+
+func stripPath(prefix string, h http.Handler) http.Handler {
+	if prefix == "" {
+		return h
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calcPrefix := substituteParams(prefix, mux.Vars(r))
+		r.URL.Path = strings.TrimPrefix(r.URL.Path, calcPrefix)
+		h.ServeHTTP(w, r)
+		// if p := strings.TrimPrefix(r.URL.Path, calcPrefix); len(p) < len(r.URL.Path) {
+		// 	r2 := new(http.Request)
+		// 	*r2 = *r
+		// 	r2.URL = new(url.URL)
+		// 	*r2.URL = *r.URL
+		// 	r2.URL.Path = p
+		// 	h.ServeHTTP(w, r2)
+		// } else {
+		// 	http.NotFound(w, r)
+		// }
 	})
 }
 
@@ -72,14 +106,34 @@ func stripPathComponent(c int, h http.Handler) http.Handler {
 		return h
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		p := strings.TrimPrefix(r.URL.Path, "/")
-		i := strings.Index(p, "/")
-		if i > 0 {
+		p := r.URL.Path
+		for c > 0 {
+			p = strings.TrimPrefix(p, "/")
+			i := strings.Index(p, "/")
+			if i <= 0 {
+				break
+			}
 			r.URL.Path = p[i:]
+			h.ServeHTTP(w, r)
+			c--
+		}
+		if c == 1 {
+			r.URL.Path = "/"
 			h.ServeHTTP(w, r)
 		} else {
 			http.NotFound(w, r)
 		}
+	})
+}
+
+func substituteParams(s string, params map[string]string) string {
+	return reVarSubsitution.ReplaceAllStringFunc(s, func(in string) string {
+		k := in[1 : len(in)-1]
+		v, ok := params[k]
+		if ok {
+			return v
+		}
+		return ""
 	})
 }
 
