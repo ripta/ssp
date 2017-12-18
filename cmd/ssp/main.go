@@ -58,6 +58,7 @@ func newLogger(o options) (*zap.Logger, error) {
 	if o.Environment == "prod" {
 		c = zap.NewProductionConfig()
 	}
+	c.Level.SetLevel(zap.DebugLevel)
 
 	c.EncoderConfig.MessageKey = "message"
 	c.EncoderConfig.CallerKey = ""
@@ -170,7 +171,8 @@ func LoggingHandler(l *zap.Logger, h http.Handler) http.Handler {
 		l.Info(
 			"Request",
 			zap.String("@tag", "ssp.access"),
-			zap.String("host", getHttpHostname(r.RemoteAddr)),
+			zap.String("host", r.Host),
+			zap.String("remote_addr", getHttpHostname(r.RemoteAddr)),
 			zap.String("username", "-"),
 			zap.String("method", r.Method),
 			zap.String("path", r.RequestURI),
