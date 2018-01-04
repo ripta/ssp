@@ -21,6 +21,7 @@ type ConfigHandler struct {
 }
 
 type ConfigRoot struct {
+	Defaults *ConfigHandler   `json:"defaults" yaml:"defaults"`
 	Handlers []*ConfigHandler `json:"handlers" yaml:"handlers"`
 }
 
@@ -34,7 +35,26 @@ func LoadConfig(filename string) (*ConfigRoot, error) {
 	if err := yaml.Unmarshal(data, cfg); err != nil {
 		return nil, err
 	}
+
+	for _, ch := range cfg.Handlers {
+		ch.setDefaults(cfg.Defaults)
+	}
 	return cfg, nil
+}
+
+func (ch *ConfigHandler) setDefaults(d *ConfigHandler) {
+	if ch.Host == "" {
+		ch.Host = d.Host
+	}
+	if ch.PathPrefix == "" {
+		ch.PathPrefix = d.PathPrefix
+	}
+	if ch.S3Bucket == "" {
+		ch.S3Bucket = d.S3Bucket
+	}
+	if ch.S3Prefix == "" {
+		ch.S3Prefix = d.S3Prefix
+	}
 }
 
 func (ch *ConfigHandler) InjectRoute(r *mux.Router, h http.Handler, log *zap.Logger) {
