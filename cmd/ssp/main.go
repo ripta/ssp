@@ -36,12 +36,12 @@ func main() {
 			log.Fatal("Could not load config", zap.String("config_file", opts.Config), zap.Error(err))
 		}
 
-		cfg.InjectRoutes(r, server.DumpRequestHandler, log)
-		// h, err := server.NewHandler()
-		// if err != nil {
-		// 	log.Fatal("Could not initialize request handler", zap.Error(err))
-		// }
-		// cfg.InjectRoutes(r, h, log)
+		// cfg.InjectRoutes(r, server.DumpRequestHandler, log)
+		h, err := server.NewHandler()
+		if err != nil {
+			log.Fatal("Could not initialize request handler", zap.Error(err))
+		}
+		cfg.InjectRoutes(r, h, log)
 	}
 
 	port := strconv.Itoa(opts.Port)
