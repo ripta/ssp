@@ -9,7 +9,8 @@
 #   https://uncommon.routed.cloud/hello/world.html -> s3://uncommon-routed-cloud/hello/world.html
 ---
 defaults:
-  require_https: true
+  # autoindex: true
+  # require_https: true
   s3_bucket: 'userdir-routed-cloud'
 handlers:
 - host: 'userdir.routed.cloud'
@@ -21,4 +22,4 @@ handlers:
   path_prefix: '/~{teamname}'
   s3_prefix: '/teams/{teamname}'
 - host: 'uncommon.routed.cloud'
-  s3_bucket: 'uncommon.routed.cloud'
+  s3_bucket: 'uncommon-routed-cloud'
