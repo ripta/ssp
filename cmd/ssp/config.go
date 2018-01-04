@@ -13,11 +13,13 @@ import (
 )
 
 type ConfigHandler struct {
-	Host       string `json:"host,omitempty" yaml:"host,omitempty"`
-	PathPrefix string `json:"path_prefix,omitempty" yaml:"path_prefix,omitempty"`
-	S3Bucket   string `json:"s3_bucket,omitempty" yaml:"s3_bucket,omitempty"`
-	S3Prefix   string `json:"s3_prefix,omitempty" yaml:"s3_prefix,omitempty"`
-	S3Region   string `json:"s3_region,omitempty" yaml:"s3_region,omitempty"`
+	Autoindex  *bool    `json:"autoindex,omitempty" yaml:"autoindex,omitempty"`
+	Host       string   `json:"host,omitempty" yaml:"host,omitempty"`
+	IndexFiles []string `json:"index_files,omitempty" yaml:"index_files,omitempty"`
+	PathPrefix string   `json:"path_prefix,omitempty" yaml:"path_prefix,omitempty"`
+	S3Bucket   string   `json:"s3_bucket,omitempty" yaml:"s3_bucket,omitempty"`
+	S3Prefix   string   `json:"s3_prefix,omitempty" yaml:"s3_prefix,omitempty"`
+	S3Region   string   `json:"s3_region,omitempty" yaml:"s3_region,omitempty"`
 }
 
 type ConfigRoot struct {
@@ -43,8 +45,14 @@ func LoadConfig(filename string) (*ConfigRoot, error) {
 }
 
 func (ch *ConfigHandler) setDefaults(d *ConfigHandler) {
+	if ch.Autoindex == nil {
+		ch.Autoindex = d.Autoindex
+	}
 	if ch.Host == "" {
 		ch.Host = d.Host
+	}
+	if len(ch.IndexFiles) == 0 {
+		ch.IndexFiles = d.IndexFiles
 	}
 	if ch.PathPrefix == "" {
 		ch.PathPrefix = d.PathPrefix

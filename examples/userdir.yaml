@@ -12,6 +12,8 @@
 ---
 defaults:
   # autoindex: true
+  index_files:
+  - index.html
   # require_https: true
   s3_bucket: 'userdir-routed-cloud'
   s3_region: 'us-west-2'
