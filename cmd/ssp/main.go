@@ -37,7 +37,7 @@ func main() {
 		}
 
 		// cfg.InjectRoutes(r, server.DumpRequestHandler, log)
-		h, err := server.NewHandler()
+		h, err := server.NewHandler(cfg.Defaults.S3Region)
 		if err != nil {
 			log.Fatal("Could not initialize request handler", zap.Error(err))
 		}

@@ -1,6 +1,8 @@
 # The options that appear under "defaults" are used as the default when they
 # do not appear under each handler's configuration. In this example, only the
 # last handler overrides an S3 bucket name.
+#
+# The default region may be required depending on your setup.
 # 
 # This example maps URLs like such:
 #   https://userdir.routed.cloud/~ripta/index.html -> s3://userdir-routed-cloud/users/ripta/index.html
@@ -12,7 +14,7 @@ defaults:
   # autoindex: true
   # require_https: true
   s3_bucket: 'userdir-routed-cloud'
-  s3_region: 'us-east-1'
+  s3_region: 'us-west-2'
 handlers:
 - host: 'userdir.routed.cloud'
   path_prefix: '/~{username}'

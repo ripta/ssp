@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -12,35 +13,39 @@ import (
 
 type handler struct {
 	cfg aws.Config
-	cli *s3.S3
-	dl  *s3manager.Downloader
 }
 
 // NewHandler creates a new HTTP handler under the default session configuration
-func NewHandler() (http.Handler, error) {
+func NewHandler(defaultRegion string) (http.Handler, error) {
 	cfg, err := external.LoadDefaultAWSConfig()
+	if cfg.Region == "" {
+		if defaultRegion == "" {
+			return nil, errors.New("AWS region missing: you may need to set the AWS_REGION environment variable, or refer to the documentation")
+		}
+		cfg.Region = defaultRegion
+	}
 	if err != nil {
 		return nil, err
 	}
 
-	cli := s3.New(cfg)
 	return &handler{
 		cfg: cfg,
-		cli: cli,
-		dl:  s3manager.NewDownloaderWithClient(cli),
 	}, nil
 }
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// io.WriteString(w, "hello world!\n")
+	cli := s3.New(h.cfg)
+	cli.Region = Region(r)
+	dl := s3manager.NewDownloaderWithClient(cli)
+
 	s3req := &s3.GetObjectInput{
-		Bucket: aws.String("userdir-routed-cloud"),
+		Bucket: aws.String(Bucket(r)),
 		Key:    aws.String(r.URL.Path),
 	}
 	buf := &aws.WriteAtBuffer{}
-	n, err := h.dl.DownloadWithContext(r.Context(), buf, s3req)
+	n, err := dl.DownloadWithContext(r.Context(), buf, s3req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusServiceUnavailable)
+		http.Error(w, fmt.Sprintf("*s3.Downloader: %s", err), http.StatusServiceUnavailable)
 		return
 	}
 	if n == 0 {
