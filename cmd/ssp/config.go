@@ -3,11 +3,13 @@ package main
 import (
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"go.uber.org/zap"
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/gorilla/mux"
+	"github.com/ripta/ssp/server"
 	"github.com/ripta/zapextra"
 )
 
@@ -43,14 +45,22 @@ func (ch *ConfigHandler) InjectRoute(r *mux.Router, h http.Handler, log *zap.Log
 	if ch.PathPrefix != "" {
 		rt = rt.PathPrefix(ch.PathPrefix)
 	}
-	if ch.S3Prefix != "" {
-		h = prependPath(ch.S3Prefix, h)
-		if ch.PathPrefix != "" {
-			h = stripPath(ch.PathPrefix, h)
+	rewritten := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		req = server.SetBucket(req, ch.S3Bucket)
+		if ch.S3Prefix != "" {
+			p := req.URL.Path
+			v := mux.Vars(req)
+			if ch.PathPrefix != "" {
+				p = strings.TrimPrefix(p, substituteParams(ch.PathPrefix, v))
+			}
+			p = substituteParams(ch.S3Prefix, v) + p
+			p = strings.TrimPrefix(p, "/")
+			req = server.SetObjectKey(req, p)
 		}
-	}
+		h.ServeHTTP(w, req)
+	})
 	log.Debug("Installing route", zap.Reflect("config_handler", ch))
-	rt.Handler(zapextra.LoggingHandler(log, h))
+	rt.Handler(zapextra.LoggingHandler(log, rewritten, zap.String("@tag", "ssp.access")))
 }
 
 func (cfg *ConfigRoot) InjectRoutes(r *mux.Router, h http.Handler, log *zap.Logger) {
