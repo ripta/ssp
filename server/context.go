@@ -12,6 +12,7 @@ type contextKey struct {
 var (
 	contextKeyBucket    = &contextKey{"bucket"}
 	contextKeyObjectKey = &contextKey{"object-key"}
+	contextKeyRegion    = &contextKey{"region"}
 )
 
 func Bucket(r *http.Request) string {
@@ -28,19 +29,31 @@ func ObjectKey(r *http.Request) string {
 	return ""
 }
 
+func Region(r *http.Request) string {
+	if rv := r.Context().Value(contextKeyRegion); rv != nil {
+		return rv.(string)
+	}
+	return ""
+}
+
 func SetBucket(r *http.Request, name string) *http.Request {
 	ctx := context.WithValue(r.Context(), contextKeyBucket, name)
 	return r.WithContext(ctx)
 }
 
-func SetBucketAndObjectKey(r *http.Request, bucket, key string) *http.Request {
-	ctx := r.Context()
-	ctx = context.WithValue(ctx, contextKeyBucket, bucket)
-	ctx = context.WithValue(ctx, contextKeyObjectKey, key)
+func SetObjectKey(r *http.Request, key string) *http.Request {
+	ctx := context.WithValue(r.Context(), contextKeyObjectKey, key)
 	return r.WithContext(ctx)
 }
 
-func SetObjectKey(r *http.Request, key string) *http.Request {
-	ctx := context.WithValue(r.Context(), contextKeyObjectKey, key)
+func SetRegion(r *http.Request, region string) *http.Request {
+	ctx := context.WithValue(r.Context(), contextKeyRegion, region)
+	return r.WithContext(ctx)
+}
+
+func SetRegionBucket(r *http.Request, region, bucket string) *http.Request {
+	ctx := r.Context()
+	ctx = context.WithValue(ctx, contextKeyRegion, region)
+	ctx = context.WithValue(ctx, contextKeyBucket, bucket)
 	return r.WithContext(ctx)
 }
