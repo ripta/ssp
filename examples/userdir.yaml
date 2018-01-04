@@ -1,0 +1,24 @@
+# The options that appear under "defaults" are used as the default when they
+# do not appear under each handler's configuration. In this example, only the
+# last handler overrides an S3 bucket name.
+# 
+# This example maps URLs like such:
+#   https://userdir.routed.cloud/~ripta/index.html -> s3://userdir-routed-cloud/users/ripta/index.html
+#   https://ripta.userdir.routed.cloud/index.html  -> s3://userdir-routed-cloud/users/ripta/index.html
+#   https://teamdir.routed.cloud/~foobar/abc.txt   -> s3://userdir-routed-cloud/teams/foobar/abc.txt
+#   https://uncommon.routed.cloud/hello/world.html -> s3://uncommon-routed-cloud/hello/world.html
+---
+defaults:
+  require_https: true
+  s3_bucket: 'userdir-routed-cloud'
+handlers:
+- host: 'userdir.routed.cloud'
+  path_prefix: '/~{username}'
+  s3_prefix: '/users/{username}'
+- host: '{username}.userdir.routed.cloud'
+  s3_prefix: '/users/{username}'
+- host: 'teamdir.routed.cloud'
+  path_prefix: '/~{teamname}'
+  s3_prefix: '/teams/{teamname}'
+- host: 'uncommon.routed.cloud'
+  s3_bucket: 'uncommon.routed.cloud'
