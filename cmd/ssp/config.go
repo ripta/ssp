@@ -18,6 +18,7 @@ type ConfigHandler struct {
 	PathPrefix string `json:"path_prefix,omitempty" yaml:"path_prefix,omitempty"`
 	S3Bucket   string `json:"s3_bucket,omitempty" yaml:"s3_bucket,omitempty"`
 	S3Prefix   string `json:"s3_prefix,omitempty" yaml:"s3_prefix,omitempty"`
+	S3Region   string `json:"s3_region,omitempty" yaml:"s3_region,omitempty"`
 }
 
 type ConfigRoot struct {
@@ -55,6 +56,9 @@ func (ch *ConfigHandler) setDefaults(d *ConfigHandler) {
 	if ch.S3Prefix == "" {
 		ch.S3Prefix = d.S3Prefix
 	}
+	if ch.S3Region == "" {
+		ch.S3Region = d.S3Region
+	}
 }
 
 func (ch *ConfigHandler) InjectRoute(r *mux.Router, h http.Handler, log *zap.Logger) {
@@ -66,7 +70,7 @@ func (ch *ConfigHandler) InjectRoute(r *mux.Router, h http.Handler, log *zap.Log
 		rt = rt.PathPrefix(ch.PathPrefix)
 	}
 	rewritten := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		req = server.SetBucket(req, ch.S3Bucket)
+		req = server.SetRegionBucket(req, ch.S3Region, ch.S3Bucket)
 		if ch.S3Prefix != "" {
 			p := req.URL.Path
 			v := mux.Vars(req)

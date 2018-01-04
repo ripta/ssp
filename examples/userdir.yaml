@@ -12,6 +12,7 @@ defaults:
   # autoindex: true
   # require_https: true
   s3_bucket: 'userdir-routed-cloud'
+  s3_region: 'us-east-1'
 handlers:
 - host: 'userdir.routed.cloud'
   path_prefix: '/~{username}'
