@@ -3,71 +3,61 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"regexp"
 	"strconv"
 
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-
 	"github.com/gorilla/mux"
 	"github.com/ripta/ssp/server"
-	"github.com/ripta/zapextra"
+	"github.com/rs/zerolog"
 )
 
 var (
 	reVarSubsitution = regexp.MustCompile("\\{[^}]+\\}")
 )
 
+func init() {
+	zerolog.TimeFieldFormat = "2006-01-02T15:04:05.000000Z0700"
+	zerolog.TimestampFieldName = "@timestamp"
+}
+
 func main() {
 	opts := parseOptions()
-	log, err := newLogger(opts)
-	if err != nil {
-		panic(err)
-	}
+	log := newLogger(opts)
 
-	log.Debug("Parsed options", zap.Reflect("options", opts))
+	log.Debug().Interface("options", opts).Msg("parse options")
 
 	r := mux.NewRouter()
-	r.NotFoundHandler = zapextra.LoggingHandler(log, http.NotFoundHandler())
+	r.NotFoundHandler = http.NotFoundHandler()
 
 	if opts.Config != "" {
 		cfg, err := LoadConfig(opts.Config)
 		if err != nil {
-			log.Fatal("Could not load config", zap.String("config_file", opts.Config), zap.Error(err))
+			log.Fatal().Err(err).Str("config_file", opts.Config).Msg("could not load config")
 		}
 
 		// cfg.InjectRoutes(r, server.DumpRequestHandler, log)
-		h, err := server.NewHandler(log, cfg.Defaults.S3Region)
+		h, err := server.NewHandler(cfg.Defaults.S3Region)
 		if err != nil {
-			log.Fatal("Could not initialize request handler", zap.Error(err))
+			log.Fatal().Err(err).Msg("could not initialize request handler")
 		}
 		cfg.InjectRoutes(r, h, log)
 	}
 
 	port := strconv.Itoa(opts.Port)
-	log.Info(fmt.Sprintf("Ready to serve requests on port %s", port))
+	log.Info().Msg(fmt.Sprintf("Ready to serve requests on port %s", port))
 
 	if err := http.ListenAndServe(":"+port, r); err != nil {
-		log.Fatal(fmt.Sprintf("%v", err))
+		log.Fatal().Err(err).Msg("cannot listen")
 	}
 }
 
-func newLogger(o options) (*zap.Logger, error) {
-	c := zap.NewDevelopmentConfig()
+func newLogger(o options) zerolog.Logger {
+	log := zerolog.New(os.Stdout).With().Timestamp().Logger()
 	if o.Environment == "prod" {
-		c = zap.NewProductionConfig()
+		return log.Level(zerolog.InfoLevel)
 	}
-	c.Level.SetLevel(zap.DebugLevel)
-
-	c.EncoderConfig.MessageKey = "message"
-	c.EncoderConfig.CallerKey = ""
-	c.EncoderConfig.LevelKey = "level"
-	c.EncoderConfig.TimeKey = "@timestamp"
-	c.EncoderConfig.StacktraceKey = "@trace"
-
-	c.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-
-	return c.Build()
+	return log.Level(zerolog.DebugLevel)
 }
 
 func substituteParams(s string, params map[string]string) string {

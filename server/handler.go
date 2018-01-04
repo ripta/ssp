@@ -10,16 +10,15 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws/external"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/s3manager"
-	"go.uber.org/zap"
+	"github.com/rs/zerolog/hlog"
 )
 
 type handler struct {
 	cfg aws.Config
-	log *zap.Logger
 }
 
 // NewHandler creates a new HTTP handler under the default session configuration
-func NewHandler(log *zap.Logger, defaultRegion string) (http.Handler, error) {
+func NewHandler(defaultRegion string) (http.Handler, error) {
 	cfg, err := external.LoadDefaultAWSConfig()
 	if cfg.Region == "" {
 		if defaultRegion == "" {
@@ -33,11 +32,11 @@ func NewHandler(log *zap.Logger, defaultRegion string) (http.Handler, error) {
 
 	return &handler{
 		cfg: cfg,
-		log: log,
 	}, nil
 }
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log := hlog.FromRequest(r)
 	cli := s3.New(h.cfg)
 	cli.Region = Region(r)
 	dl := s3manager.NewDownloaderWithClient(cli)
@@ -50,19 +49,17 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	n, err := dl.DownloadWithContext(r.Context(), buf, s3req)
 	if err != nil {
 		if reqerr, ok := err.(awserr.RequestFailure); ok {
-			h.log.Error(
-				reqerr.Message(),
-				zap.String("s3-region", cli.Region),
-				zap.String("s3-bucket", *s3req.Bucket),
-				zap.String("s3-key", *s3req.Key),
-				zap.Int("amz-status-code", reqerr.StatusCode()),
-				zap.String("amz-code", reqerr.Code()),
-				zap.String("amz-request-id", reqerr.RequestID()),
-				zap.Error(err),
-			)
+			log.Error().Err(err).
+				Str("s3-region", cli.Region).
+				Str("s3-bucket", *s3req.Bucket).
+				Str("s3-key", *s3req.Key).
+				Int("amz-status-code", reqerr.StatusCode()).
+				Str("amz-code", reqerr.Code()).
+				Str("amz-request-id", reqerr.RequestID()).
+				Msg(reqerr.Message())
 			http.Error(w, reqerr.Message()+" Request ID: "+reqerr.RequestID(), reqerr.StatusCode())
 		} else {
-			h.log.Error("generic s3 download error", zap.Error(err))
+			log.Error().Err(err).Msg("generic s3 download error")
 			http.Error(w, http.StatusText(http.StatusServiceUnavailable), http.StatusServiceUnavailable)
 		}
 		return

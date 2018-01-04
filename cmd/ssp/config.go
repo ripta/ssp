@@ -5,12 +5,11 @@ import (
 	"net/http"
 	"strings"
 
-	"go.uber.org/zap"
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/gorilla/mux"
 	"github.com/ripta/ssp/server"
-	"github.com/ripta/zapextra"
+	"github.com/rs/zerolog"
 )
 
 type ConfigHandler struct {
@@ -61,7 +60,7 @@ func (ch *ConfigHandler) setDefaults(d *ConfigHandler) {
 	}
 }
 
-func (ch *ConfigHandler) InjectRoute(r *mux.Router, h http.Handler, log *zap.Logger) {
+func (ch *ConfigHandler) InjectRoute(r *mux.Router, h http.Handler, log zerolog.Logger) {
 	rt := r.NewRoute()
 	if ch.Host != "" {
 		rt = rt.Host(ch.Host)
@@ -83,11 +82,11 @@ func (ch *ConfigHandler) InjectRoute(r *mux.Router, h http.Handler, log *zap.Log
 		}
 		h.ServeHTTP(w, req)
 	})
-	log.Debug("Installing route", zap.Reflect("config_handler", ch))
-	rt.Handler(zapextra.LoggingHandler(log, rewritten, zap.String("@tag", "ssp.access")))
+	log.Debug().Interface("config_handler", ch).Msg("installing route")
+	rt.Handler(rewritten)
 }
 
-func (cfg *ConfigRoot) InjectRoutes(r *mux.Router, h http.Handler, log *zap.Logger) {
+func (cfg *ConfigRoot) InjectRoutes(r *mux.Router, h http.Handler, log zerolog.Logger) {
 	for _, ch := range cfg.Handlers {
 		ch.InjectRoute(r, h, log)
 	}
