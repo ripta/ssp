@@ -6,17 +6,20 @@ import (
 	"net/http"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/awserr"
 	"github.com/aws/aws-sdk-go-v2/aws/external"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/s3manager"
+	"go.uber.org/zap"
 )
 
 type handler struct {
 	cfg aws.Config
+	log *zap.Logger
 }
 
 // NewHandler creates a new HTTP handler under the default session configuration
-func NewHandler(defaultRegion string) (http.Handler, error) {
+func NewHandler(log *zap.Logger, defaultRegion string) (http.Handler, error) {
 	cfg, err := external.LoadDefaultAWSConfig()
 	if cfg.Region == "" {
 		if defaultRegion == "" {
@@ -30,6 +33,7 @@ func NewHandler(defaultRegion string) (http.Handler, error) {
 
 	return &handler{
 		cfg: cfg,
+		log: log,
 	}, nil
 }
 
@@ -40,12 +44,27 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	s3req := &s3.GetObjectInput{
 		Bucket: aws.String(Bucket(r)),
-		Key:    aws.String(r.URL.Path),
+		Key:    aws.String(ObjectKey(r)),
 	}
 	buf := &aws.WriteAtBuffer{}
 	n, err := dl.DownloadWithContext(r.Context(), buf, s3req)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("*s3.Downloader: %s", err), http.StatusServiceUnavailable)
+		if reqerr, ok := err.(awserr.RequestFailure); ok {
+			h.log.Error(
+				reqerr.Message(),
+				zap.String("s3-region", cli.Region),
+				zap.String("s3-bucket", *s3req.Bucket),
+				zap.String("s3-key", *s3req.Key),
+				zap.Int("amz-status-code", reqerr.StatusCode()),
+				zap.String("amz-code", reqerr.Code()),
+				zap.String("amz-request-id", reqerr.RequestID()),
+				zap.Error(err),
+			)
+			http.Error(w, reqerr.Message()+" Request ID: "+reqerr.RequestID(), reqerr.StatusCode())
+		} else {
+			h.log.Error("generic s3 download error", zap.Error(err))
+			http.Error(w, http.StatusText(http.StatusServiceUnavailable), http.StatusServiceUnavailable)
+		}
 		return
 	}
 	if n == 0 {
