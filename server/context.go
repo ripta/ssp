@@ -5,11 +5,13 @@ import (
 	"net/http"
 )
 
-type contextKey int
+type contextKey struct {
+	name string
+}
 
-const (
-	contextKeyBucket contextKey = iota
-	contextKeyObjectKey
+var (
+	contextKeyBucket    = &contextKey{"bucket"}
+	contextKeyObjectKey = &contextKey{"object-key"}
 )
 
 func Bucket(r *http.Request) string {
