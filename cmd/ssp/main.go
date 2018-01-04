@@ -12,7 +12,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
-	"github.com/ripta/ssp/server"
+	"github.com/ripta/ssp/proxy"
 	"github.com/rs/zerolog"
 )
 

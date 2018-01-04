@@ -8,7 +8,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/gorilla/mux"
-	"github.com/ripta/ssp/server"
+	"github.com/ripta/ssp/proxy"
 	"github.com/rs/zerolog"
 )
 
