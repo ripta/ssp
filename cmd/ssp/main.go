@@ -42,7 +42,13 @@ func main() {
 		if err != nil {
 			log.Fatal("Could not load config", zap.String("config_file", opts.Config), zap.Error(err))
 		}
+
 		cfg.InjectRoutes(r, server.DumpRequestHandler, log)
+		// h, err := server.NewHandler()
+		// if err != nil {
+		// 	log.Fatal("Could not initialize request handler", zap.Error(err))
+		// }
+		// cfg.InjectRoutes(r, h, log)
 	}
 
 	port := strconv.Itoa(opts.Port)
@@ -172,7 +178,7 @@ func LoggingHandler(l *zap.Logger, h http.Handler) http.Handler {
 			"Request",
 			zap.String("@tag", "ssp.access"),
 			zap.String("host", r.Host),
-			zap.String("remote_addr", getHttpHostname(r.RemoteAddr)),
+			zap.String("remote_addr", getHTTPHostname(r.RemoteAddr)),
 			zap.String("username", "-"),
 			zap.String("method", r.Method),
 			zap.String("path", r.RequestURI),
@@ -184,7 +190,7 @@ func LoggingHandler(l *zap.Logger, h http.Handler) http.Handler {
 	})
 }
 
-func getHttpHostname(addr string) string {
+func getHTTPHostname(addr string) string {
 	host, _, err := net.SplitHostPort(addr)
 	if err != nil {
 		return addr
