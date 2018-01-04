@@ -2,19 +2,17 @@ package main
 
 import (
 	"fmt"
-	"net"
 	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
-	"sync/atomic"
-	"time"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
 	"github.com/gorilla/mux"
 	"github.com/ripta/ssp/server"
+	"github.com/ripta/zapextra"
 )
 
 var (
@@ -31,7 +29,7 @@ func main() {
 	log.Debug("Parsed options", zap.Reflect("options", opts))
 
 	r := mux.NewRouter()
-	r.NotFoundHandler = LoggingHandler(log, http.NotFoundHandler())
+	r.NotFoundHandler = zapextra.LoggingHandler(log, http.NotFoundHandler())
 	// r.Host("userdir.routed.cloud").PathPrefix("/~{username}").
 	// 	Handler(LoggingHandler(log, stripPath("/~{username}", prependPath("/users/{username}", server.DumpRequestHandler))))
 	// r.Host("{username}.userdir.routed.cloud").
@@ -142,58 +140,4 @@ func substituteParams(s string, params map[string]string) string {
 		}
 		return ""
 	})
-}
-
-// Ensure responseSizer is always a ResponseWriter at compile time
-var _ http.ResponseWriter = &responseSizer{}
-
-type responseSizer struct {
-	w    http.ResponseWriter
-	code int
-	size uint64
-}
-
-func (s *responseSizer) Header() http.Header {
-	return s.w.Header()
-}
-
-func (s *responseSizer) Write(b []byte) (int, error) {
-	n, err := s.w.Write(b)
-	atomic.AddUint64(&s.size, uint64(n))
-	return n, err
-}
-
-func (s *responseSizer) WriteHeader(code int) {
-	s.w.WriteHeader(code)
-	s.code = code
-}
-
-func LoggingHandler(l *zap.Logger, h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		s := &responseSizer{w: w}
-		ts := time.Now()
-		h.ServeHTTP(s, r)
-		elapsed := time.Since(ts)
-		l.Info(
-			"Request",
-			zap.String("@tag", "ssp.access"),
-			zap.String("host", r.Host),
-			zap.String("remote_addr", getHTTPHostname(r.RemoteAddr)),
-			zap.String("username", "-"),
-			zap.String("method", r.Method),
-			zap.String("path", r.RequestURI),
-			zap.Int("status", s.code),
-			zap.Uint64("size", s.size),
-			zap.Duration("duration_human", elapsed),
-			zap.Int64("duration_ns", elapsed.Nanoseconds()),
-		)
-	})
-}
-
-func getHTTPHostname(addr string) string {
-	host, _, err := net.SplitHostPort(addr)
-	if err != nil {
-		return addr
-	}
-	return host
 }

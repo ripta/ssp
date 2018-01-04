@@ -8,6 +8,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/gorilla/mux"
+	"github.com/ripta/zapextra"
 )
 
 type ConfigHandler struct {
@@ -49,7 +50,7 @@ func (ch *ConfigHandler) InjectRoute(r *mux.Router, h http.Handler, log *zap.Log
 		}
 	}
 	log.Debug("Installing route", zap.Reflect("config_handler", ch))
-	rt.Handler(LoggingHandler(log, h))
+	rt.Handler(zapextra.LoggingHandler(log, h))
 }
 
 func (cfg *ConfigRoot) InjectRoutes(r *mux.Router, h http.Handler, log *zap.Logger) {
