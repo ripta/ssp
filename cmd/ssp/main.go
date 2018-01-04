@@ -6,8 +6,12 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"time"
+
+	"github.com/rs/zerolog/hlog"
 
 	"github.com/gorilla/mux"
+	"github.com/justinas/alice"
 	"github.com/ripta/ssp/server"
 	"github.com/rs/zerolog"
 )
@@ -17,6 +21,7 @@ var (
 )
 
 func init() {
+	zerolog.DurationFieldUnit = time.Millisecond
 	zerolog.TimeFieldFormat = "2006-01-02T15:04:05.000000Z0700"
 	zerolog.TimestampFieldName = "@timestamp"
 }
@@ -47,9 +52,36 @@ func main() {
 	port := strconv.Itoa(opts.Port)
 	log.Info().Msg(fmt.Sprintf("Ready to serve requests on port %s", port))
 
-	if err := http.ListenAndServe(":"+port, r); err != nil {
+	chain := newHandlerChain(log, opts)
+	if err := http.ListenAndServe(":"+port, chain.Then(r)); err != nil {
 		log.Fatal().Err(err).Msg("cannot listen")
 	}
+}
+
+func accessLogger(r *http.Request, status, size int, dur time.Duration) {
+	hlog.FromRequest(r).Info().
+		Str("host", r.Host).
+		Int("status", status).
+		Int("size", size).
+		Dur("duration_ms", dur).
+		Msg("request")
+}
+
+func newHandlerChain(log zerolog.Logger, opts options) alice.Chain {
+	// Inject the logging device as early as possible in the chain
+	chain := alice.New(hlog.NewHandler(log), hlog.AccessHandler(accessLogger))
+	// Add all handlers that inject further information for the access logger
+	chain = chain.Append(
+		hlog.MethodHandler("method"),
+		hlog.RefererHandler("referer"),
+		hlog.RemoteAddrHandler("remote_addr"),
+		hlog.RequestIDHandler("request_id", "X-Request-ID"),
+		hlog.URLHandler("path"),
+		hlog.UserAgentHandler("user_agent"),
+	)
+	// Enforce a timeout on anything further in the chain
+	chain = chain.Append(timeoutHandler(10*time.Second, "timed out"))
+	return chain
 }
 
 func newLogger(o options) zerolog.Logger {
@@ -69,4 +101,10 @@ func substituteParams(s string, params map[string]string) string {
 		}
 		return ""
 	})
+}
+
+func timeoutHandler(dt time.Duration, msg string) func(http.Handler) http.Handler {
+	return func(h http.Handler) http.Handler {
+		return http.TimeoutHandler(h, dt, msg)
+	}
 }

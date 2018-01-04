@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/rs/zerolog"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/awserr"
 	"github.com/aws/aws-sdk-go-v2/aws/external"
@@ -37,6 +39,7 @@ func NewHandler(defaultRegion string) (http.Handler, error) {
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log := hlog.FromRequest(r)
+
 	cli := s3.New(h.cfg)
 	cli.Region = Region(r)
 	dl := s3manager.NewDownloaderWithClient(cli)
@@ -45,17 +48,21 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Bucket: aws.String(Bucket(r)),
 		Key:    aws.String(ObjectKey(r)),
 	}
+	log.UpdateContext(func(c zerolog.Context) zerolog.Context {
+		return c.
+			Str("s3_region", cli.Region).
+			Str("s3_bucket", *s3req.Bucket).
+			Str("s3_key", *s3req.Key)
+	})
+
 	buf := &aws.WriteAtBuffer{}
 	n, err := dl.DownloadWithContext(r.Context(), buf, s3req)
 	if err != nil {
 		if reqerr, ok := err.(awserr.RequestFailure); ok {
 			log.Error().Err(err).
-				Str("s3-region", cli.Region).
-				Str("s3-bucket", *s3req.Bucket).
-				Str("s3-key", *s3req.Key).
-				Int("amz-status-code", reqerr.StatusCode()).
-				Str("amz-code", reqerr.Code()).
-				Str("amz-request-id", reqerr.RequestID()).
+				Int("amz_status_code", reqerr.StatusCode()).
+				Str("amz_code", reqerr.Code()).
+				Str("amz_request_id", reqerr.RequestID()).
 				Msg(reqerr.Message())
 			http.Error(w, reqerr.Message()+" Request ID: "+reqerr.RequestID(), reqerr.StatusCode())
 		} else {
