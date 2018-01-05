@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"regexp"
 	"strconv"
 	"time"
@@ -28,9 +27,8 @@ func init() {
 
 func main() {
 	opts := parseOptions()
-	log := newLogger(opts)
-
-	log.Debug().Interface("options", opts).Msg("parse options")
+	log := opts.Log
+	log.Debug().Interface("options", opts).Msg("parsed options")
 
 	r := mux.NewRouter()
 	r.NotFoundHandler = http.NotFoundHandler()
@@ -82,14 +80,6 @@ func newHandlerChain(log zerolog.Logger, opts options) alice.Chain {
 	// Enforce a timeout on anything further in the chain
 	chain = chain.Append(timeoutHandler(10*time.Second, "timed out"))
 	return chain
-}
-
-func newLogger(o options) zerolog.Logger {
-	log := zerolog.New(os.Stdout).With().Timestamp().Logger()
-	if o.Environment == "prod" {
-		return log.Level(zerolog.InfoLevel)
-	}
-	return log.Level(zerolog.DebugLevel)
 }
 
 func substituteParams(s string, params map[string]string) string {
