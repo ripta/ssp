@@ -8,8 +8,8 @@ import (
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 	"github.com/ripta/ssp/proxy"
-	"github.com/rs/zerolog"
 )
 
 type ConfigHandler struct {
@@ -68,13 +68,17 @@ func (ch *ConfigHandler) setDefaults(d *ConfigHandler) {
 	}
 }
 
-func (ch *ConfigHandler) InjectRoute(r *mux.Router, h http.Handler, log zerolog.Logger) {
+func (ch *ConfigHandler) InjectRoute(r *mux.Router) error {
 	rt := r.NewRoute()
 	if ch.Host != "" {
 		rt = rt.Host(ch.Host)
 	}
 	if ch.PathPrefix != "" {
 		rt = rt.PathPrefix(ch.PathPrefix)
+	}
+	h, err := server.NewHandler(ch.S3Region)
+	if err != nil {
+		return errors.Wrap(err, "could not initialize request handler")
 	}
 	rewritten := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		req = server.SetRegionBucket(req, ch.S3Region, ch.S3Bucket)
@@ -90,12 +94,15 @@ func (ch *ConfigHandler) InjectRoute(r *mux.Router, h http.Handler, log zerolog.
 		}
 		h.ServeHTTP(w, req)
 	})
-	log.Debug().Interface("config_handler", ch).Msg("installing route")
 	rt.Handler(rewritten)
+	return nil
 }
 
-func (cfg *ConfigRoot) InjectRoutes(r *mux.Router, h http.Handler, log zerolog.Logger) {
+func (cfg *ConfigRoot) InjectRoutes(r *mux.Router) error {
 	for _, ch := range cfg.Handlers {
-		ch.InjectRoute(r, h, log)
+		if err := ch.InjectRoute(r); err != nil {
+			return err
+		}
 	}
+	return nil
 }

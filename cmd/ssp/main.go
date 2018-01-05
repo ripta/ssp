@@ -11,7 +11,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
-	"github.com/ripta/ssp/proxy"
 	"github.com/rs/zerolog"
 )
 
@@ -40,11 +39,9 @@ func main() {
 		}
 
 		// cfg.InjectRoutes(r, server.DumpRequestHandler, log)
-		h, err := server.NewHandler(cfg.Defaults.S3Region)
-		if err != nil {
-			log.Fatal().Err(err).Msg("could not initialize request handler")
+		if err = cfg.InjectRoutes(r); err != nil {
+			log.Fatal().Err(err).Msg("")
 		}
-		cfg.InjectRoutes(r, h, log)
 	}
 
 	port := strconv.Itoa(opts.Port)
