@@ -43,7 +43,7 @@ install: all
 		done
 
 release: fmt vet
-	$Q go build -v -ldflags "-s -w -X main.BuildVersion=$(VERSION) -X main.BuildDate=$(BUILD_DATE)" -o bin/ssp github.com/ripta/ssp/cmd/ssp
+	$Q go build -v -ldflags "-s -w -X main.BuildVersion=$(VERSION) -X main.BuildDate=$(BUILD_DATE) -X main.BuildEnvironment=prod" -o bin/ssp github.com/ripta/ssp/cmd/ssp
 	$Q codesign -f --deep -s 'Ripta Pasay' bin/ssp
 
 run: fmt
