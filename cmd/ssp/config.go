@@ -83,7 +83,7 @@ func (ch *ConfigHandler) InjectRoute(r *mux.Router) error {
 	if ch.S3Prefix != "" {
 		h = ch.rewriteHandler(h)
 	}
-	rt.Handler(h)
+	rt.Methods("GET").Handler(h)
 	return nil
 }
 
