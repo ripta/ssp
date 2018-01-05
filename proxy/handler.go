@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/rs/zerolog"
 
@@ -16,24 +17,34 @@ import (
 )
 
 type handler struct {
-	cfg aws.Config
+	cfg    aws.Config
+	region string
+	bucket string
 }
 
 // NewHandler creates a new HTTP handler under the default session configuration
-func NewHandler(defaultRegion string) (http.Handler, error) {
+func NewHandler(region, bucket string) (http.Handler, error) {
 	cfg, err := external.LoadDefaultAWSConfig()
-	if cfg.Region == "" {
-		if defaultRegion == "" {
-			return nil, errors.New("AWS region missing: you may need to set the AWS_REGION environment variable, or refer to the documentation")
-		}
-		cfg.Region = defaultRegion
-	}
 	if err != nil {
 		return nil, err
 	}
 
+	if region != "" {
+		cfg.Region = region
+	}
+	if cfg.Region == "" {
+		return nil, errors.New("AWS region missing: you may need to set the AWS_REGION environment variable, or refer to the documentation")
+	}
+
+	if bucket == "" {
+		return nil, errors.New("Bucket name is required")
+	}
+
+	// fmt.Fprintf(os.Stderr, "set up %v in %v\n", bucket, region)
 	return &handler{
-		cfg: cfg,
+		cfg:    cfg,
+		region: region,
+		bucket: bucket,
 	}, nil
 }
 
@@ -41,18 +52,18 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log := hlog.FromRequest(r)
 
 	cli := s3.New(h.cfg)
-	cli.Region = Region(r)
 	dl := s3manager.NewDownloaderWithClient(cli)
 
+	path := strings.TrimPrefix(r.URL.Path, "/")
 	s3req := &s3.GetObjectInput{
-		Bucket: aws.String(Bucket(r)),
-		Key:    aws.String(ObjectKey(r)),
+		Bucket: aws.String(h.bucket),
+		Key:    aws.String(path),
 	}
 	log.UpdateContext(func(c zerolog.Context) zerolog.Context {
 		return c.
-			Str("s3_region", cli.Region).
-			Str("s3_bucket", *s3req.Bucket).
-			Str("s3_key", *s3req.Key)
+			Str("s3_region", h.region).
+			Str("s3_bucket", h.bucket).
+			Str("s3_key", path)
 	})
 
 	buf := &aws.WriteAtBuffer{}

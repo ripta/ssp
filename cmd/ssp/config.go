@@ -76,26 +76,31 @@ func (ch *ConfigHandler) InjectRoute(r *mux.Router) error {
 	if ch.PathPrefix != "" {
 		rt = rt.PathPrefix(ch.PathPrefix)
 	}
-	h, err := server.NewHandler(ch.S3Region)
+	h, err := server.NewHandler(ch.S3Region, ch.S3Bucket)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize request handler")
 	}
-	rewritten := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		req = server.SetRegionBucket(req, ch.S3Region, ch.S3Bucket)
-		if ch.S3Prefix != "" {
-			p := req.URL.Path
-			v := mux.Vars(req)
-			if ch.PathPrefix != "" {
-				p = strings.TrimPrefix(p, substituteParams(ch.PathPrefix, v))
-			}
-			p = substituteParams(ch.S3Prefix, v) + p
-			p = strings.TrimPrefix(p, "/")
-			req = server.SetObjectKey(req, p)
+	if ch.S3Prefix != "" {
+		h = ch.rewriteHandler(h)
+	}
+	rt.Handler(h)
+	return nil
+}
+
+func (ch *ConfigHandler) rewriteHandler(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		// deep copy the request so we can mutate the URL
+		req = req.WithContext(req.Context())
+		// rewrite URL
+		p := req.URL.Path
+		v := mux.Vars(req)
+		if ch.PathPrefix != "" {
+			p = strings.TrimPrefix(p, substituteParams(ch.PathPrefix, v))
 		}
+		p = substituteParams(ch.S3Prefix, v) + p
+		req.URL.Path = p
 		h.ServeHTTP(w, req)
 	})
-	rt.Handler(rewritten)
-	return nil
 }
 
 func (cfg *ConfigRoot) InjectRoutes(r *mux.Router) error {

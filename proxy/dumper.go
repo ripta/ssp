@@ -14,7 +14,6 @@ var DumpRequestHandler = http.HandlerFunc(dumpRequest)
 func dumpRequest(w http.ResponseWriter, r *http.Request) {
 	d := spew.NewDefaultConfig()
 
-	io.WriteString(w, fmt.Sprintf("Mapped to s3://%s/%s\n", Bucket(r), ObjectKey(r)))
 	io.WriteString(w, fmt.Sprintf("URL: %q\n", r.URL.Path))
 	io.WriteString(w, fmt.Sprintf("Host: %q\n", r.Host))
 	io.WriteString(w, fmt.Sprintf("RequestURI: %q\n", r.RequestURI))
