@@ -102,12 +102,3 @@ func (ch *ConfigHandler) rewriteHandler(h http.Handler) http.Handler {
 		h.ServeHTTP(w, req)
 	})
 }
-
-func (cfg *ConfigRoot) InjectRoutes(r *mux.Router) error {
-	for _, ch := range cfg.Handlers {
-		if err := ch.InjectRoute(r); err != nil {
-			return err
-		}
-	}
-	return nil
-}

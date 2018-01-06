@@ -39,8 +39,13 @@ func main() {
 		}
 
 		// cfg.InjectRoutes(r, server.DumpRequestHandler, log)
-		if err = cfg.InjectRoutes(r); err != nil {
-			log.Fatal().Err(err).Msg("")
+		for _, ch := range cfg.Handlers {
+			rl := log.With().Interface("route", ch).Logger()
+			if err := ch.InjectRoute(r); err != nil {
+				log.Fatal().Err(err).Msg("route could not be installed")
+			} else {
+				rl.Debug().Msg("route installed")
+			}
 		}
 	}
 
