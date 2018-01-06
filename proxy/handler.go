@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -25,6 +26,7 @@ type handler struct {
 	cfg    aws.Config
 	region string
 	bucket string
+	opts   Options
 }
 
 // NewHandler creates a new HTTP handler under the default session configuration
@@ -50,6 +52,7 @@ func NewHandler(region, bucket string, opts Options) (http.Handler, error) {
 		cfg:    cfg,
 		region: region,
 		bucket: bucket,
+		opts:   opts,
 	}, nil
 }
 
@@ -63,6 +66,13 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Str("s3_key", path)
 	})
 
+	if strings.HasSuffix(path, "/") {
+		if len(h.opts.IndexFiles) == 0 {
+			http.Error(w, "Directory listing denied", http.StatusForbidden)
+			return
+		}
+		path += h.opts.IndexFiles[0]
+	}
 	h.serveFile(w, log, path)
 }
 
@@ -122,6 +132,7 @@ func (h *handler) serveFile(w http.ResponseWriter, log *zerolog.Logger, path str
 		w.Header().Add("Content-Length", strconv.FormatInt(v, 10))
 	}
 
+	// Prepare "206 Partial Content" if Content-Range was returned
 	if aws.StringValue(obj.ContentRange) != "" {
 		copyStringHeader(w, "Content-Range", obj.ContentRange)
 		w.WriteHeader(http.StatusPartialContent)
