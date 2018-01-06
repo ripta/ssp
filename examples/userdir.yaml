@@ -11,7 +11,7 @@
 #   https://uncommon.routed.cloud/hello/world.html -> s3://uncommon-routed-cloud/hello/world.html
 ---
 defaults:
-  # autoindex: true
+  autoindex: true
   index_files:
   - index.html
   # require_https: true
