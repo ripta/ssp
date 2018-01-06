@@ -69,13 +69,6 @@ func (ch *ConfigHandler) setDefaults(d *ConfigHandler) {
 }
 
 func (ch *ConfigHandler) InjectRoute(r *mux.Router) error {
-	rt := r.NewRoute()
-	if ch.Host != "" {
-		rt = rt.Host(ch.Host)
-	}
-	if ch.PathPrefix != "" {
-		rt = rt.PathPrefix(ch.PathPrefix)
-	}
 	h, err := proxy.NewHandler(ch.S3Region, ch.S3Bucket, ch.Options)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize request handler")
@@ -83,8 +76,19 @@ func (ch *ConfigHandler) InjectRoute(r *mux.Router) error {
 	if ch.S3Prefix != "" {
 		h = ch.rewriteHandler(h)
 	}
-	rt.Methods("GET").Handler(h)
+	ch.buildRoute(r).Handler(h)
 	return nil
+}
+
+func (ch *ConfigHandler) buildRoute(r *mux.Router) *mux.Route {
+	rt := r.NewRoute()
+	if ch.Host != "" {
+		rt = rt.Host(ch.Host)
+	}
+	if ch.PathPrefix != "" {
+		rt = rt.PathPrefix(ch.PathPrefix)
+	}
+	return rt.Methods("GET")
 }
 
 func (ch *ConfigHandler) rewriteHandler(h http.Handler) http.Handler {
