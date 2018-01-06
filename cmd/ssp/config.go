@@ -13,13 +13,13 @@ import (
 )
 
 type ConfigHandler struct {
-	Autoindex  *bool    `json:"autoindex,omitempty" yaml:"autoindex,omitempty"`
-	Host       string   `json:"host,omitempty" yaml:"host,omitempty"`
-	IndexFiles []string `json:"index_files,omitempty" yaml:"index_files,omitempty"`
-	PathPrefix string   `json:"path_prefix,omitempty" yaml:"path_prefix,omitempty"`
-	S3Bucket   string   `json:"s3_bucket,omitempty" yaml:"s3_bucket,omitempty"`
-	S3Prefix   string   `json:"s3_prefix,omitempty" yaml:"s3_prefix,omitempty"`
-	S3Region   string   `json:"s3_region,omitempty" yaml:"s3_region,omitempty"`
+	Host       string `json:"host,omitempty" yaml:"host,omitempty"`
+	PathPrefix string `json:"path_prefix,omitempty" yaml:"path_prefix,omitempty"`
+	S3Bucket   string `json:"s3_bucket,omitempty" yaml:"s3_bucket,omitempty"`
+	S3Prefix   string `json:"s3_prefix,omitempty" yaml:"s3_prefix,omitempty"`
+	S3Region   string `json:"s3_region,omitempty" yaml:"s3_region,omitempty"`
+
+	proxy.Options `yaml:",inline"`
 }
 
 type ConfigRoot struct {
@@ -76,7 +76,7 @@ func (ch *ConfigHandler) InjectRoute(r *mux.Router) error {
 	if ch.PathPrefix != "" {
 		rt = rt.PathPrefix(ch.PathPrefix)
 	}
-	h, err := proxy.NewHandler(ch.S3Region, ch.S3Bucket)
+	h, err := proxy.NewHandler(ch.S3Region, ch.S3Bucket, ch.Options)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize request handler")
 	}

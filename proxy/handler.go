@@ -16,6 +16,11 @@ import (
 	"github.com/rs/zerolog/hlog"
 )
 
+type Options struct {
+	Autoindex  *bool    `json:"autoindex,omitempty" yaml:"autoindex,omitempty"`
+	IndexFiles []string `json:"index_files,omitempty" yaml:"index_files,omitempty"`
+}
+
 type handler struct {
 	cfg    aws.Config
 	region string
@@ -23,7 +28,7 @@ type handler struct {
 }
 
 // NewHandler creates a new HTTP handler under the default session configuration
-func NewHandler(region, bucket string) (http.Handler, error) {
+func NewHandler(region, bucket string, opts Options) (http.Handler, error) {
 	cfg, err := external.LoadDefaultAWSConfig()
 	if err != nil {
 		return nil, err
