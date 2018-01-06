@@ -84,15 +84,22 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if strings.HasSuffix(path, "/") {
-		if h.opts.Autoindex != nil && *h.opts.Autoindex {
-			h.serveDirectoryListing(w, r, path)
+		var foundPath string
+		for _, candidate := range h.opts.IndexFiles {
+			if h.hasObject(r, path+candidate) {
+				foundPath = path + candidate
+				break
+			}
+		}
+		if foundPath == "" {
+			if h.opts.Autoindex != nil && *h.opts.Autoindex {
+				h.serveDirectoryListing(w, r, path)
+			} else {
+				http.Error(w, "Could not find a valid index file. Additionally, directory listing was denied.", http.StatusForbidden)
+			}
 			return
 		}
-		if len(h.opts.IndexFiles) == 0 {
-			http.Error(w, "Directory listing denied", http.StatusForbidden)
-			return
-		}
-		path += h.opts.IndexFiles[0]
+		path = foundPath
 	}
 	h.serveFile(w, r, path)
 }
@@ -209,6 +216,17 @@ func (h *handler) serveFile(w http.ResponseWriter, r *http.Request, path string)
 		log.Error().Err(err).Int64("bytes_written", n).Msg("")
 		return
 	}
+}
+
+func (h *handler) hasObject(r *http.Request, path string) bool {
+	i := &s3.HeadObjectInput{
+		Bucket: aws.String(h.bucket),
+		Key:    aws.String(path),
+	}
+	q := s3.New(h.cfg).HeadObjectRequest(i)
+	q.SetContext(r.Context())
+	_, err := q.Send()
+	return err == nil
 }
 
 func (h *handler) getObject(path string) (*s3.GetObjectOutput, error) {
