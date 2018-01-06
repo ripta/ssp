@@ -76,7 +76,7 @@ func (ch *ConfigHandler) InjectRoute(r *mux.Router) error {
 	if ch.PathPrefix != "" {
 		rt = rt.PathPrefix(ch.PathPrefix)
 	}
-	h, err := server.NewHandler(ch.S3Region, ch.S3Bucket)
+	h, err := proxy.NewHandler(ch.S3Region, ch.S3Bucket)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize request handler")
 	}

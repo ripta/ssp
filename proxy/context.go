@@ -1,4 +1,4 @@
-package server
+package proxy
 
 type contextKey struct {
 	name string
