@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/lox/httpcache"
 	"github.com/rs/zerolog/hlog"
 
 	"github.com/gorilla/mux"
@@ -67,6 +68,12 @@ func accessLogger(r *http.Request, status, size int, dur time.Duration) {
 		Msg("request")
 }
 
+func cachingHandlerGenerator(c httpcache.Cache) func(http.Handler) http.Handler {
+	return func(h http.Handler) http.Handler {
+		return httpcache.NewHandler(c, h)
+	}
+}
+
 func newHandlerChain(log zerolog.Logger, opts options) alice.Chain {
 	// Inject the logging device as early as possible in the chain
 	chain := alice.New(hlog.NewHandler(log), hlog.AccessHandler(accessLogger))
@@ -81,6 +88,11 @@ func newHandlerChain(log zerolog.Logger, opts options) alice.Chain {
 	)
 	// Enforce a timeout on anything further in the chain
 	chain = chain.Append(timeoutHandler(10*time.Second, "timed out"))
+	// In-memory caching is optional
+	if opts.UseCache {
+		log.Info().Msg("Enabled in-memory cache")
+		chain = chain.Append(cachingHandlerGenerator(httpcache.NewMemoryCache()))
+	}
 	return chain
 }
 

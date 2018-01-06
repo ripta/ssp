@@ -33,6 +33,7 @@ type options struct {
 	Config           string `arg:"--config,env:SSP_CONFIG"`
 	Environment      string `arg:"--env,env:SSP_ENV,help:Environment name 'dev' or 'prod'"`
 	Port             int    `arg:"--port,env:SSP_PORT,help:Port to listen on"`
+	UseCache         bool   `arg:"--use-cache,env:SSP_USE_CACHE"`
 
 	Log zerolog.Logger `arg:"-"`
 }
@@ -49,6 +50,7 @@ func parseOptions() options {
 	o.BucketUserPrefix = DefaultBucketUserPrefix
 	o.Environment = BuildEnvironment
 	o.Port = DefaultPort
+	o.UseCache = false
 
 	arg.MustParse(&o)
 
