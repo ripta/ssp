@@ -75,6 +75,13 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Immediately handle website redirects
+	if aws.StringValue(obj.WebsiteRedirectLocation) != "" {
+		copyStringHeader(w, "Location", obj.WebsiteRedirectLocation)
+		w.WriteHeader(http.StatusTemporaryRedirect)
+		return
+	}
+
 	// Copy common headers from S3 to the response
 	copyStringHeader(w, "Cache-Control", obj.CacheControl)
 	copyStringHeader(w, "Content-Disposition", obj.ContentDisposition)
