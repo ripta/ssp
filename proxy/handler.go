@@ -1,7 +1,9 @@
 package proxy
 
 import (
+	"bytes"
 	"errors"
+	"html/template"
 	"io"
 	"net/http"
 	"strconv"
@@ -16,6 +18,21 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/hlog"
 )
+
+const directoryListingTemplateText = `
+<!doctype html>
+<html>
+<body>
+	<ul>
+	{{- range $i, $entry := . }}
+		<li><a href="{{ $entry.Name }}">{{ $entry.Name }}</a> <em>{{ $entry.Size }} bytes</em></li>
+	{{- end }}
+	</ul>
+</body>
+</html>
+`
+
+var directoryListingTemplate = template.Must(template.New("autoindex").Parse(directoryListingTemplateText))
 
 type Options struct {
 	Autoindex  *bool    `json:"autoindex,omitempty" yaml:"autoindex,omitempty"`
@@ -58,7 +75,7 @@ func NewHandler(region, bucket string, opts Options) (http.Handler, error) {
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log := hlog.FromRequest(r)
-	path := r.URL.Path
+	path := strings.TrimPrefix(r.URL.Path, "/")
 	log.UpdateContext(func(c zerolog.Context) zerolog.Context {
 		return c.
 			Str("s3_region", h.region).
@@ -67,16 +84,66 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if strings.HasSuffix(path, "/") {
+		if h.opts.Autoindex != nil && *h.opts.Autoindex {
+			h.serveDirectoryListing(w, r, path)
+			return
+		}
 		if len(h.opts.IndexFiles) == 0 {
 			http.Error(w, "Directory listing denied", http.StatusForbidden)
 			return
 		}
 		path += h.opts.IndexFiles[0]
 	}
-	h.serveFile(w, log, path)
+	h.serveFile(w, r, path)
 }
 
-func (h *handler) serveFile(w http.ResponseWriter, log *zerolog.Logger, path string) {
+type direntry struct {
+	Name    string
+	Size    int64
+	ModTime *time.Time
+}
+
+func (h *handler) renderDirectoryListing(w http.ResponseWriter, files []direntry, isTruncated bool) error {
+	var buf bytes.Buffer
+	if err := directoryListingTemplate.Execute(&buf, files); err != nil {
+		return err
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	buf.WriteTo(w)
+	return nil
+}
+
+func (h *handler) serveDirectoryListing(w http.ResponseWriter, r *http.Request, path string) {
+	log := hlog.FromRequest(r)
+
+	// Request from S3
+	obj, err := h.listObjects(r, path)
+	if err != nil {
+		log.Error().Err(err).Msg("generic s3 listing error")
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	var files []direntry
+	for _, content := range obj.Contents {
+		files = append(files, direntry{
+			Name:    strings.TrimPrefix(aws.StringValue(content.Key), path),
+			Size:    aws.Int64Value(content.Size),
+			ModTime: content.LastModified,
+		})
+	}
+
+	err = h.renderDirectoryListing(w, files, aws.BoolValue(obj.IsTruncated))
+	if err != nil {
+		log.Error().Err(err).Msg("directory listing render error")
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+	}
+}
+
+func (h *handler) serveFile(w http.ResponseWriter, r *http.Request, path string) {
+	log := hlog.FromRequest(r)
+
 	// Request from S3
 	obj, err := h.getObject(path)
 	if err != nil {
@@ -150,6 +217,17 @@ func (h *handler) getObject(path string) (*s3.GetObjectOutput, error) {
 		Key:    aws.String(path),
 	}
 	return s3.New(h.cfg).GetObjectRequest(r).Send()
+}
+
+func (h *handler) listObjects(r *http.Request, prefix string) (*s3.ListObjectsV2Output, error) {
+	i := &s3.ListObjectsV2Input{
+		Bucket:    aws.String(h.bucket),
+		Prefix:    aws.String(prefix),
+		Delimiter: aws.String("/"),
+	}
+	q := s3.New(h.cfg).ListObjectsV2Request(i)
+	q.SetContext(r.Context())
+	return q.Send()
 }
 
 func copyStringHeader(w http.ResponseWriter, k string, v *string) {
