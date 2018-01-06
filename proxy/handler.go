@@ -7,12 +7,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/rs/zerolog"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/external"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/hlog"
 )
 
@@ -63,6 +63,10 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Str("s3_key", path)
 	})
 
+	h.serveFile(w, log, path)
+}
+
+func (h *handler) serveFile(w http.ResponseWriter, log *zerolog.Logger, path string) {
 	// Request from S3
 	obj, err := h.getObject(path)
 	if err != nil {
@@ -127,7 +131,6 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Error().Err(err).Int64("bytes_written", n).Msg("")
 		return
 	}
-	return
 }
 
 func (h *handler) getObject(path string) (*s3.GetObjectOutput, error) {
