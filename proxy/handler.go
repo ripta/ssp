@@ -2,17 +2,17 @@ package server
 
 import (
 	"errors"
-	"fmt"
+	"io"
 	"net/http"
-	"strings"
+	"strconv"
+	"time"
 
 	"github.com/rs/zerolog"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/aws/awserr"
 	"github.com/aws/aws-sdk-go-v2/aws/external"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go-v2/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/rs/zerolog/hlog"
 )
 
@@ -50,15 +50,7 @@ func NewHandler(region, bucket string) (http.Handler, error) {
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log := hlog.FromRequest(r)
-
-	cli := s3.New(h.cfg)
-	dl := s3manager.NewDownloaderWithClient(cli)
-
-	path := strings.TrimPrefix(r.URL.Path, "/")
-	s3req := &s3.GetObjectInput{
-		Bucket: aws.String(h.bucket),
-		Key:    aws.String(path),
-	}
+	path := r.URL.Path
 	log.UpdateContext(func(c zerolog.Context) zerolog.Context {
 		return c.
 			Str("s3_region", h.region).
@@ -66,15 +58,15 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Str("s3_key", path)
 	})
 
-	buf := &aws.WriteAtBuffer{}
-	n, err := dl.DownloadWithContext(r.Context(), buf, s3req)
+	// Request from S3
+	obj, err := h.getObject(path)
 	if err != nil {
 		if reqerr, ok := err.(awserr.RequestFailure); ok {
-			log.Error().Err(err).
+			log.Error().Err(reqerr).
 				Int("amz_status_code", reqerr.StatusCode()).
 				Str("amz_code", reqerr.Code()).
 				Str("amz_request_id", reqerr.RequestID()).
-				Msg(reqerr.Message())
+				Msg("")
 			http.Error(w, reqerr.Message()+" Request ID: "+reqerr.RequestID(), reqerr.StatusCode())
 		} else {
 			log.Error().Err(err).Msg("generic s3 download error")
@@ -82,18 +74,60 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	if n == 0 {
-		http.Error(w, http.StatusText(http.StatusNoContent), http.StatusNoContent)
-		return
+
+	// Copy common headers from S3 to the response
+	copyStringHeader(w, "Cache-Control", obj.CacheControl)
+	copyStringHeader(w, "Content-Disposition", obj.ContentDisposition)
+	copyStringHeader(w, "Content-Encoding", obj.ContentEncoding)
+	copyStringHeader(w, "Content-Language", obj.ContentLanguage)
+	copyStringHeader(w, "Content-Type", obj.ContentType)
+	copyStringHeader(w, "ETag", obj.ETag)
+	copyStringHeader(w, "Expires", obj.Expires)
+
+	// Copy the Last-Modified header as long as it's not the zero value
+	if t := aws.TimeValue(obj.LastModified); !t.Equal(time.Time{}) {
+		s := t.UTC().Format(http.TimeFormat)
+		copyStringHeader(w, "Last-Modified", &s)
 	}
-	n2, err := w.Write(buf.Bytes())
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+
+	// Copy meta headers
+	copyStringHeader(w, "X-Amz-Version-ID", obj.VersionId)
+	for k, v := range obj.Metadata {
+		copyStringHeader(w, "X-Amz-Meta-"+k, &v)
 	}
-	if n2 != int(n) {
-		http.Error(w, fmt.Sprintf("Expected to write %d bytes, but wrote %d bytes", n, n2), http.StatusInternalServerError)
+
+	// Return "204 No Content" only if a Content-Length header in fact exists AND it's zero
+	if obj.ContentLength != nil {
+		v := aws.Int64Value(obj.ContentLength)
+		if v == 0 {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		w.Header().Add("Content-Length", strconv.FormatInt(v, 10))
+	}
+
+	if aws.StringValue(obj.ContentRange) != "" {
+		copyStringHeader(w, "Content-Range", obj.ContentRange)
+		w.WriteHeader(http.StatusPartialContent)
+	}
+
+	if n, err := io.Copy(w, obj.Body); err != nil {
+		log.Error().Err(err).Int64("bytes_written", n).Msg("")
 		return
 	}
 	return
+}
+
+func (h *handler) getObject(path string) (*s3.GetObjectOutput, error) {
+	r := &s3.GetObjectInput{
+		Bucket: aws.String(h.bucket),
+		Key:    aws.String(path),
+	}
+	return s3.New(h.cfg).GetObjectRequest(r).Send()
+}
+
+func copyStringHeader(w http.ResponseWriter, k string, v *string) {
+	if s := aws.StringValue(v); s != "" {
+		w.Header().Add(k, s)
+	}
 }
