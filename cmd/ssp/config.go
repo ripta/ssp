@@ -93,15 +93,16 @@ func (ch *ConfigHandler) buildRoute(r *mux.Router) *mux.Route {
 
 func (ch *ConfigHandler) rewriteHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		// deep copy the request so we can mutate the URL
-		req = req.WithContext(req.Context())
-		// rewrite URL
+		// rewrite path
 		p := req.URL.Path
 		v := mux.Vars(req)
 		if ch.PathPrefix != "" {
 			p = strings.TrimPrefix(p, substituteParams(ch.PathPrefix, v))
 		}
 		p = substituteParams(ch.S3Prefix, v) + p
+
+		// deep copy the request so we can reinject the rewritten path
+		req = req.WithContext(req.Context())
 		req.URL.Path = p
 		h.ServeHTTP(w, req)
 	})
