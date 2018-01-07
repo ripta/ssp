@@ -32,6 +32,7 @@ func main() {
 	log.Info().Msgf("ssp v%s", opts.Version())
 
 	r := mux.NewRouter()
+	r.Path("/healthz").HandlerFunc(healthzHandler)
 	r.NotFoundHandler = http.NotFoundHandler()
 
 	if opts.Config != "" {
@@ -73,6 +74,11 @@ func cachingHandlerGenerator(c httpcache.Cache) func(http.Handler) http.Handler 
 	return func(h http.Handler) http.Handler {
 		return httpcache.NewHandler(c, h)
 	}
+}
+
+func healthzHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintln(w, "ok")
 }
 
 func newHandlerChain(log zerolog.Logger, opts options) alice.Chain {
