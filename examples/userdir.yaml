@@ -19,6 +19,9 @@ defaults:
   s3_region: 'us-west-2'
 handlers:
 - host: 'userdir.routed.cloud'
+  path: '/'
+  s3_prefix: '/users'
+- host: 'userdir.routed.cloud'
   path_prefix: '/~{username}'
   s3_prefix: '/users/{username}'
 - host: '{username}.userdir.routed.cloud'
