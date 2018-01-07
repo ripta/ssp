@@ -1,5 +1,5 @@
 BUILD_DATE := `date -u +%Y%m%d`
-VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo v0.0.1)
+VERSION := $(shell git describe --tags --dirty 2>/dev/null || echo v0.0.1)
 
 PKGS = $(or $(PKG),$(shell go list ./...))
 FIXFILES = $(shell goimports -l $(shell go list -f '{{.Dir}}' ./...))

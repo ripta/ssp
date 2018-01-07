@@ -29,7 +29,9 @@ func main() {
 	opts := parseOptions()
 	log := opts.Log
 	log.Debug().Interface("options", opts).Msg("parsed options")
-	log.Info().Msgf("ssp v%s", opts.Version())
+	if version := opts.Version(); version != "" {
+		log.Info().Msgf("ssp %s (built %s)", version, BuildDate)
+	}
 
 	r := mux.NewRouter()
 	r.Path("/healthz").HandlerFunc(healthzHandler)
