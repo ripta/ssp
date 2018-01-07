@@ -17,7 +17,7 @@ debug: fmt vet
 	$Q go build -v -ldflags "-X main.BuildVersion=$(VERSION) -X main.BuildDate=$(BUILD_DATE)" -o bin/ssp -race github.com/ripta/ssp/cmd/ssp
 
 dep:
-	$Q go get -v ./...
+	$Q dep ensure
 
 dep-godoc:
 	$Q go get -v golang.org/x/tools/cmd/godoc
