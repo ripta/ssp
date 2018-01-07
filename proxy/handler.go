@@ -24,7 +24,10 @@ const directoryListingTemplateText = `
 <html>
 <body>
 	<ul>
-	{{- range $i, $entry := . }}
+	{{- range $i, $prefix := .Prefixes }}
+		<li><a href="{{ $prefix }}">{{ $prefix }}</a></li>
+	{{- end }}
+	{{- range $i, $entry := .Entries }}
 		<li><a href="{{ $entry.Name }}">{{ $entry.Name }}</a> <em>{{ $entry.Size }} bytes</em></li>
 	{{- end }}
 	</ul>
@@ -104,15 +107,20 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.serveFile(w, r, path)
 }
 
-type direntry struct {
+type dirListing struct {
+	Entries     []dirEntry
+	Prefixes    []string
+	IsTruncated bool
+}
+type dirEntry struct {
 	Name    string
 	Size    int64
 	ModTime *time.Time
 }
 
-func (h *handler) renderDirectoryListing(w http.ResponseWriter, files []direntry, isTruncated bool) error {
+func (h *handler) renderDirectoryListing(w http.ResponseWriter, listing dirListing) error {
 	var buf bytes.Buffer
-	if err := directoryListingTemplate.Execute(&buf, files); err != nil {
+	if err := directoryListingTemplate.Execute(&buf, listing); err != nil {
 		return err
 	}
 
@@ -132,16 +140,26 @@ func (h *handler) serveDirectoryListing(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	var files []direntry
+	var files []dirEntry
 	for _, content := range obj.Contents {
-		files = append(files, direntry{
+		files = append(files, dirEntry{
 			Name:    strings.TrimPrefix(aws.StringValue(content.Key), path),
 			Size:    aws.Int64Value(content.Size),
 			ModTime: content.LastModified,
 		})
 	}
 
-	err = h.renderDirectoryListing(w, files, aws.BoolValue(obj.IsTruncated))
+	var prefixes []string
+	for _, cp := range obj.CommonPrefixes {
+		prefixes = append(prefixes, strings.TrimPrefix(aws.StringValue(cp.Prefix), path))
+	}
+
+	listing := dirListing{
+		Entries:     files,
+		Prefixes:    prefixes,
+		IsTruncated: aws.BoolValue(obj.IsTruncated),
+	}
+	err = h.renderDirectoryListing(w, listing)
 	if err != nil {
 		log.Error().Err(err).Msg("directory listing render error")
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
