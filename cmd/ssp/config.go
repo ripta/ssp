@@ -14,6 +14,7 @@ import (
 
 type ConfigHandler struct {
 	Host       string `json:"host,omitempty" yaml:"host,omitempty"`
+	Path       string `json:"path,omitempty" yaml:"path,omitempty"`
 	PathPrefix string `json:"path_prefix,omitempty" yaml:"path_prefix,omitempty"`
 	S3Bucket   string `json:"s3_bucket,omitempty" yaml:"s3_bucket,omitempty"`
 	S3Prefix   string `json:"s3_prefix,omitempty" yaml:"s3_prefix,omitempty"`
@@ -54,6 +55,9 @@ func (ch *ConfigHandler) setDefaults(d *ConfigHandler) {
 	if len(ch.IndexFiles) == 0 {
 		ch.IndexFiles = d.IndexFiles
 	}
+	if ch.Path == "" {
+		ch.Path = d.Path
+	}
 	if ch.PathPrefix == "" {
 		ch.PathPrefix = d.PathPrefix
 	}
@@ -85,7 +89,9 @@ func (ch *ConfigHandler) buildRoute(r *mux.Router) *mux.Route {
 	if ch.Host != "" {
 		rt = rt.Host(ch.Host)
 	}
-	if ch.PathPrefix != "" {
+	if ch.Path != "" {
+		rt = rt.Path(ch.Path)
+	} else if ch.PathPrefix != "" {
 		rt = rt.PathPrefix(ch.PathPrefix)
 	}
 	return rt.Methods("GET")
