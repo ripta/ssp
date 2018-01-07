@@ -175,6 +175,13 @@ func (h *handler) serveFile(w http.ResponseWriter, r *http.Request, path string)
 		return
 	}
 
+	if aws.StringValue(obj.ContentType) == "application/x-directory" && !strings.HasSuffix(r.RequestURI, "/") {
+		dirpath := r.RequestURI + "/"
+		copyStringHeader(w, "Location", &dirpath)
+		w.WriteHeader(http.StatusTemporaryRedirect)
+		return
+	}
+
 	// Copy common headers from S3 to the response
 	copyStringHeader(w, "Cache-Control", obj.CacheControl)
 	copyStringHeader(w, "Content-Disposition", obj.ContentDisposition)
