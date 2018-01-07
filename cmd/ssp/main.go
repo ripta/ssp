@@ -29,6 +29,7 @@ func main() {
 	opts := parseOptions()
 	log := opts.Log
 	log.Debug().Interface("options", opts).Msg("parsed options")
+	log.Info().Msgf("ssp v%s", opts.Version())
 
 	r := mux.NewRouter()
 	r.NotFoundHandler = http.NotFoundHandler()
