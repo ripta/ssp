@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/external"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 
 	"github.com/rs/zerolog"
@@ -43,10 +44,10 @@ type Options struct {
 }
 
 type handler struct {
-	cfg    aws.Config
-	region string
-	bucket string
-	opts   Options
+	Client s3iface.S3API
+	Region string
+	Bucket string
+	Options
 }
 
 // NewHandler creates a new HTTP handler under the default session configuration
@@ -67,12 +68,11 @@ func NewHandler(region, bucket string, opts Options) (http.Handler, error) {
 		return nil, errors.New("Bucket name is required")
 	}
 
-	// fmt.Fprintf(os.Stderr, "set up %v in %v\n", bucket, region)
 	return &handler{
-		cfg:    cfg,
-		region: region,
-		bucket: bucket,
-		opts:   opts,
+		Client:  s3.New(cfg),
+		Region:  region,
+		Bucket:  bucket,
+		Options: opts,
 	}, nil
 }
 
@@ -85,21 +85,21 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log := hlog.FromRequest(r)
 	log.UpdateContext(func(c zerolog.Context) zerolog.Context {
 		return c.
-			Str("s3_region", h.region).
-			Str("s3_bucket", h.bucket).
+			Str("s3_region", h.Region).
+			Str("s3_bucket", h.Bucket).
 			Str("s3_key", path)
 	})
 
 	if strings.HasSuffix(path, "/") {
 		var foundPath string
-		for _, candidate := range h.opts.IndexFiles {
+		for _, candidate := range h.Options.IndexFiles {
 			if h.hasObject(r, path+candidate) {
 				foundPath = path + candidate
 				break
 			}
 		}
 		if foundPath == "" {
-			if h.opts.Autoindex != nil && *h.opts.Autoindex {
+			if h.Options.Autoindex != nil && *h.Options.Autoindex {
 				if path == "/" {
 					h.serveDirectoryListing(w, r, "")
 				} else {
@@ -253,10 +253,10 @@ func (h *handler) serveFile(w http.ResponseWriter, r *http.Request, path string)
 
 func (h *handler) hasObject(r *http.Request, path string) bool {
 	i := &s3.HeadObjectInput{
-		Bucket: aws.String(h.bucket),
+		Bucket: aws.String(h.Bucket),
 		Key:    aws.String(path),
 	}
-	q := s3.New(h.cfg).HeadObjectRequest(i)
+	q := h.Client.HeadObjectRequest(i)
 	q.SetContext(r.Context())
 	_, err := q.Send()
 	return err == nil
@@ -264,19 +264,19 @@ func (h *handler) hasObject(r *http.Request, path string) bool {
 
 func (h *handler) getObject(path string) (*s3.GetObjectOutput, error) {
 	r := &s3.GetObjectInput{
-		Bucket: aws.String(h.bucket),
+		Bucket: aws.String(h.Bucket),
 		Key:    aws.String(path),
 	}
-	return s3.New(h.cfg).GetObjectRequest(r).Send()
+	return h.Client.GetObjectRequest(r).Send()
 }
 
 func (h *handler) listObjects(r *http.Request, prefix string) (*s3.ListObjectsV2Output, error) {
 	i := &s3.ListObjectsV2Input{
-		Bucket:    aws.String(h.bucket),
+		Bucket:    aws.String(h.Bucket),
 		Prefix:    aws.String(prefix),
 		Delimiter: aws.String("/"),
 	}
-	q := s3.New(h.cfg).ListObjectsV2Request(i)
+	q := h.Client.ListObjectsV2Request(i)
 	q.SetContext(r.Context())
 	return q.Send()
 }
