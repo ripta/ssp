@@ -3,6 +3,10 @@ RUN go get github.com/golang/dep/cmd/dep
 
 ENV PROJECT=github.com/ripta/ssp
 ENV CGO_ENABLED=0
+
+ARG BUILD_DATE
+ARG VERSION
+
 RUN mkdir -p $GOPATH/src/$PROJECT
 COPY . $GOPATH/src/$PROJECT
 RUN cd $GOPATH/src/$PROJECT && dep ensure
