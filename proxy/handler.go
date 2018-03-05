@@ -77,8 +77,12 @@ func NewHandler(region, bucket string, opts Options) (http.Handler, error) {
 }
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	if path != "/" {
+		path = strings.TrimPrefix(path, "/")
+	}
+
 	log := hlog.FromRequest(r)
-	path := strings.TrimPrefix(r.URL.Path, "/")
 	log.UpdateContext(func(c zerolog.Context) zerolog.Context {
 		return c.
 			Str("s3_region", h.region).
@@ -96,7 +100,11 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		if foundPath == "" {
 			if h.opts.Autoindex != nil && *h.opts.Autoindex {
-				h.serveDirectoryListing(w, r, path)
+				if path == "/" {
+					h.serveDirectoryListing(w, r, "")
+				} else {
+					h.serveDirectoryListing(w, r, path)
+				}
 			} else {
 				http.Error(w, "Could not find a valid index file. Additionally, directory listing was denied.", http.StatusForbidden)
 			}
