@@ -3,20 +3,15 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"regexp"
 	"strconv"
 	"time"
 
-	"github.com/lox/httpcache"
-	"github.com/rs/zerolog/hlog"
-
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
+	"github.com/lox/httpcache"
+	"github.com/ripta/ssp/config"
 	"github.com/rs/zerolog"
-)
-
-var (
-	reVarSubsitution = regexp.MustCompile("\\{[^}]+\\}")
+	"github.com/rs/zerolog/hlog"
 )
 
 func init() {
@@ -38,7 +33,7 @@ func main() {
 	r.NotFoundHandler = http.NotFoundHandler()
 
 	if opts.Config != "" {
-		cfg, err := LoadConfig(opts.Config)
+		cfg, err := config.Load(opts.Config)
 		if err != nil {
 			log.Fatal().Err(err).Str("config_file", opts.Config).Msg("could not load config")
 		}
@@ -103,17 +98,6 @@ func newHandlerChain(log zerolog.Logger, opts options) alice.Chain {
 		chain = chain.Append(cachingHandlerGenerator(httpcache.NewMemoryCache()))
 	}
 	return chain
-}
-
-func substituteParams(s string, params map[string]string) string {
-	return reVarSubsitution.ReplaceAllStringFunc(s, func(in string) string {
-		k := in[1 : len(in)-1]
-		v, ok := params[k]
-		if ok {
-			return v
-		}
-		return ""
-	})
 }
 
 func timeoutHandler(dt time.Duration, msg string) func(http.Handler) http.Handler {

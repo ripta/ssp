@@ -1,15 +1,19 @@
-package main
+package config
 
 import (
 	"io/ioutil"
 	"net/http"
+	"regexp"
 	"strings"
-
-	yaml "gopkg.in/yaml.v2"
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/ripta/ssp/proxy"
+	yaml "gopkg.in/yaml.v2"
+)
+
+var (
+	reVarSubsitution = regexp.MustCompile("\\{[^}]+\\}")
 )
 
 type ConfigHandler struct {
@@ -28,7 +32,7 @@ type ConfigRoot struct {
 	Handlers []*ConfigHandler `json:"handlers" yaml:"handlers"`
 }
 
-func LoadConfig(filename string) (*ConfigRoot, error) {
+func Load(filename string) (*ConfigRoot, error) {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -111,5 +115,16 @@ func (ch *ConfigHandler) rewriteHandler(h http.Handler) http.Handler {
 		req = req.WithContext(req.Context())
 		req.URL.Path = p
 		h.ServeHTTP(w, req)
+	})
+}
+
+func substituteParams(s string, params map[string]string) string {
+	return reVarSubsitution.ReplaceAllStringFunc(s, func(in string) string {
+		k := in[1 : len(in)-1]
+		v, ok := params[k]
+		if ok {
+			return v
+		}
+		return ""
 	})
 }
