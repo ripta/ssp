@@ -50,6 +50,10 @@ func Load(filename string) (*ConfigRoot, error) {
 }
 
 func (ch *ConfigHandler) setDefaults(d *ConfigHandler) {
+	if d == nil {
+		return
+	}
+
 	if ch.Autoindex == nil {
 		ch.Autoindex = d.Autoindex
 	}
