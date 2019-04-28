@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/ripta/ssp/proxy"
+	"github.com/ripta/ssp/proxy/s3"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -81,7 +82,7 @@ func (ch *ConfigHandler) setDefaults(d *ConfigHandler) {
 }
 
 func (ch *ConfigHandler) InjectRoute(r *mux.Router) error {
-	h, err := proxy.NewHandler(ch.S3Region, ch.S3Bucket, ch.Options)
+	h, err := s3.NewHandler(ch.S3Region, ch.S3Bucket, ch.Options)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize request handler")
 	}

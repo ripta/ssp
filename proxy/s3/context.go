@@ -1,4 +1,4 @@
-package proxy
+package s3
 
 type contextKey struct {
 	name string

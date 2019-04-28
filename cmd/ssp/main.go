@@ -38,7 +38,6 @@ func main() {
 			log.Fatal().Err(err).Str("config_file", opts.Config).Msg("could not load config")
 		}
 
-		// cfg.InjectRoutes(r, server.DumpRequestHandler, log)
 		for _, ch := range cfg.Handlers {
 			rl := log.With().Interface("route", ch).Logger()
 			if err := ch.InjectRoute(r); err != nil {

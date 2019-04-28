@@ -1,9 +1,7 @@
-package proxy
+package s3
 
 import (
-	"bytes"
 	"errors"
-	"html/template"
 	"io"
 	"net/http"
 	"strconv"
@@ -18,40 +16,20 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/hlog"
+
+	"github.com/ripta/ssp/proxy"
 )
-
-const directoryListingTemplateText = `
-<!doctype html>
-<html>
-<body>
-	<ul>
-	{{- range $i, $prefix := .Prefixes }}
-		<li><a href="{{ $prefix }}">{{ $prefix }}</a></li>
-	{{- end }}
-	{{- range $i, $entry := .Entries }}
-		<li><a href="{{ $entry.Name }}">{{ $entry.Name }}</a> <em>{{ $entry.Size }} bytes</em></li>
-	{{- end }}
-	</ul>
-</body>
-</html>
-`
-
-var directoryListingTemplate = template.Must(template.New("autoindex").Parse(directoryListingTemplateText))
-
-type Options struct {
-	Autoindex  *bool    `json:"autoindex,omitempty" yaml:"autoindex,omitempty"`
-	IndexFiles []string `json:"index_files,omitempty" yaml:"index_files,omitempty"`
-}
 
 type handler struct {
 	Client s3iface.S3API
 	Region string
 	Bucket string
-	Options
+
+	proxy.Options
 }
 
 // NewHandler creates a new HTTP handler under the default session configuration
-func NewHandler(region, bucket string, opts Options) (http.Handler, error) {
+func NewHandler(region, bucket string, opts proxy.Options) (http.Handler, error) {
 	cfg, err := external.LoadDefaultAWSConfig()
 	if err != nil {
 		return nil, err
@@ -115,28 +93,6 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.serveFile(w, r, path)
 }
 
-type dirListing struct {
-	Entries     []dirEntry
-	Prefixes    []string
-	IsTruncated bool
-}
-type dirEntry struct {
-	Name    string
-	Size    int64
-	ModTime *time.Time
-}
-
-func (h *handler) renderDirectoryListing(w http.ResponseWriter, listing dirListing) error {
-	var buf bytes.Buffer
-	if err := directoryListingTemplate.Execute(&buf, listing); err != nil {
-		return err
-	}
-
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	buf.WriteTo(w)
-	return nil
-}
-
 func (h *handler) serveDirectoryListing(w http.ResponseWriter, r *http.Request, path string) {
 	log := hlog.FromRequest(r)
 
@@ -148,9 +104,9 @@ func (h *handler) serveDirectoryListing(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	var files []dirEntry
+	var files []proxy.DirectoryEntry
 	for _, content := range obj.Contents {
-		files = append(files, dirEntry{
+		files = append(files, proxy.DirectoryEntry{
 			Name:    strings.TrimPrefix(aws.StringValue(content.Key), path),
 			Size:    aws.Int64Value(content.Size),
 			ModTime: content.LastModified,
@@ -162,13 +118,12 @@ func (h *handler) serveDirectoryListing(w http.ResponseWriter, r *http.Request, 
 		prefixes = append(prefixes, strings.TrimPrefix(aws.StringValue(cp.Prefix), path))
 	}
 
-	listing := dirListing{
+	listing := proxy.DirectoryListing{
 		Entries:     files,
 		Prefixes:    prefixes,
 		IsTruncated: aws.BoolValue(obj.IsTruncated),
 	}
-	err = h.renderDirectoryListing(w, listing)
-	if err != nil {
+	if err = proxy.RenderDirectoryListing(w, listing); err != nil {
 		log.Error().Err(err).Msg("directory listing render error")
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	}
