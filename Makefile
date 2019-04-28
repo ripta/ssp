@@ -28,6 +28,9 @@ dep-goimports:
 doc: dep-godoc
 	godoc -http=:8080 -index
 
+docker-build:
+	$Q docker build -t ripta/ssp:latest --build-arg BUILD_DATE=$(BUILD_DATE) --build-arg VERSION=$(VERSION) .
+
 fmt: dep-goimports
 	$Q for src in $(FIXFILES); \
 		do \

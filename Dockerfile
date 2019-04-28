@@ -1,4 +1,4 @@
-FROM golang:1.9 AS builder
+FROM golang:1.12 AS builder
 RUN go get github.com/golang/dep/cmd/dep
 
 ENV PROJECT=github.com/ripta/ssp
