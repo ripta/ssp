@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/ripta/ssp/proxy"
+	"github.com/ripta/ssp/proxy/gcs"
 	"github.com/ripta/ssp/proxy/s3"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -21,6 +22,10 @@ type ConfigHandler struct {
 	Host       string `json:"host,omitempty" yaml:"host,omitempty"`
 	Path       string `json:"path,omitempty" yaml:"path,omitempty"`
 	PathPrefix string `json:"path_prefix,omitempty" yaml:"path_prefix,omitempty"`
+
+	GCSBucket  string `json:"gcs_bucket,omitempty" yaml:"gcs_bucket,omitempty"`
+	GCSPrefix  string `json:"gcs_prefix,omitempty" yaml:"gcs_prefix,omitempty"`
+	GCSKeyFile string `json:"gcs_key_file,omitempty" yaml:"gcs_key_file,omitempty"`
 	S3Bucket   string `json:"s3_bucket,omitempty" yaml:"s3_bucket,omitempty"`
 	S3Prefix   string `json:"s3_prefix,omitempty" yaml:"s3_prefix,omitempty"`
 	S3Region   string `json:"s3_region,omitempty" yaml:"s3_region,omitempty"`
@@ -70,6 +75,17 @@ func (ch *ConfigHandler) setDefaults(d *ConfigHandler) {
 	if ch.PathPrefix == "" {
 		ch.PathPrefix = d.PathPrefix
 	}
+
+	if ch.GCSBucket == "" {
+		ch.GCSBucket = d.GCSBucket
+	}
+	if ch.GCSKeyFile == "" {
+		ch.GCSKeyFile = d.GCSKeyFile
+	}
+	if ch.GCSPrefix == "" {
+		ch.GCSPrefix = d.GCSPrefix
+	}
+
 	if ch.S3Bucket == "" {
 		ch.S3Bucket = d.S3Bucket
 	}
@@ -82,14 +98,26 @@ func (ch *ConfigHandler) setDefaults(d *ConfigHandler) {
 }
 
 func (ch *ConfigHandler) InjectRoute(r *mux.Router) error {
-	h, err := s3.NewHandler(ch.S3Region, ch.S3Bucket, ch.Options)
-	if err != nil {
-		return errors.Wrap(err, "could not initialize request handler")
+	if ch.S3Region != "" {
+		h, err := s3.NewHandler(ch.S3Region, ch.S3Bucket, ch.Options)
+		if err != nil {
+			return errors.Wrap(err, "could not initialize S3 request handler")
+		}
+		if ch.S3Prefix != "" {
+			h = ch.rewriteHandler(h)
+		}
+		ch.buildRoute(r).Handler(h)
 	}
-	if ch.S3Prefix != "" {
-		h = ch.rewriteHandler(h)
+	if ch.GCSBucket != "" {
+		h, err := gcs.NewHandler(ch.GCSBucket, ch.GCSKeyFile, ch.Options)
+		if err != nil {
+			return errors.Wrap(err, "could not initialize GCS request handler")
+		}
+		if ch.GCSPrefix != "" {
+			h = ch.rewriteHandler(h)
+		}
+		ch.buildRoute(r).Handler(h)
 	}
-	ch.buildRoute(r).Handler(h)
 	return nil
 }
 
