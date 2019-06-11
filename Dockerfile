@@ -1,20 +1,22 @@
 FROM golang:1.12 AS builder
-RUN go get github.com/golang/dep/cmd/dep
 
-ENV PROJECT=github.com/ripta/ssp
 ENV CGO_ENABLED=0
+ENV GO111MODULE=on
 
 ARG BUILD_DATE
 ARG VERSION
 
-RUN mkdir -p $GOPATH/src/$PROJECT
-COPY . $GOPATH/src/$PROJECT
-RUN cd $GOPATH/src/$PROJECT && dep ensure
-RUN go build -v -ldflags "-s -w -X main.BuildVersion=$VERSION -X main.BuildDate=$BUILD_DATE -X main.BuildEnvironment=prod" -o /ssp $PROJECT/cmd/ssp
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN go build -v -ldflags "-s -w -X main.BuildVersion=$VERSION -X main.BuildDate=$BUILD_DATE -X main.BuildEnvironment=prod" -o bin/ssp ./cmd/ssp
 
 
 FROM alpine
-COPY --from=builder /ssp /app/ssp
+COPY --from=builder /app/bin/ssp /app/bin/ssp
 COPY examples/userdir.yaml /app/config.yaml
-ENTRYPOINT ["/app/ssp"]
+ENTRYPOINT ["/app/bin/ssp"]
 CMD ["--config=/app/config.yaml"]
