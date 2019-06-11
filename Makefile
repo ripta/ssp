@@ -14,10 +14,7 @@ clean:
 
 # Debug build: enable race detection, don't strip symbols
 debug: fmt vet
-	$Q go build -v -ldflags "-X main.BuildVersion=$(VERSION) -X main.BuildDate=$(BUILD_DATE)" -o bin/ssp -race github.com/ripta/ssp/cmd/ssp
-
-dep:
-	$Q dep ensure
+	$Q go build -v -ldflags "-X main.BuildVersion=$(VERSION) -X main.BuildDate=$(BUILD_DATE)" -o bin/ssp -race ./cmd/ssp
 
 dep-godoc:
 	$Q go get -v golang.org/x/tools/cmd/godoc
@@ -46,7 +43,7 @@ install: all
 		done
 
 release: fmt vet
-	$Q go build -v -ldflags "-s -w -X main.BuildVersion=$(VERSION) -X main.BuildDate=$(BUILD_DATE) -X main.BuildEnvironment=prod" -o bin/ssp github.com/ripta/ssp/cmd/ssp
+	$Q go build -v -ldflags "-s -w -X main.BuildVersion=$(VERSION) -X main.BuildDate=$(BUILD_DATE) -X main.BuildEnvironment=prod" -o bin/ssp ./cmd/ssp
 	$Q codesign -f --deep -s 'Ripta Pasay' bin/ssp
 
 run: fmt
