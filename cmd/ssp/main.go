@@ -13,6 +13,7 @@ import (
 	"github.com/ripta/ssp/config"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/hlog"
+	"gopkg.in/yaml.v2"
 )
 
 func init() {
@@ -123,7 +124,8 @@ func timeoutHandler(dt time.Duration, msg string) func(http.Handler) http.Handle
 
 func unknownHostHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		msg := fmt.Sprintf("404 unknown route handler for host %q", r.Host)
+		p, _ := yaml.Marshal(r.Header)
+		msg := fmt.Sprintf("404 unknown route handler for host %q:\n---\n%s", r.Host, string(p))
 		http.Error(w, msg, http.StatusNotFound)
 	}
 }
