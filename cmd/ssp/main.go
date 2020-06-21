@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
 	"github.com/lox/httpcache"
@@ -120,7 +119,7 @@ func newHandlerChain(log zerolog.Logger, cfg *config.ConfigRoot) alice.Chain {
 	)
 
 	if h := cfg.Proxy.TrustForwardedHeaders; h != nil && *h {
-		chain = chain.Append(handlers.ProxyHeaders)
+		chain = chain.Append(proxyHeaderRewriteHandler)
 	}
 
 	chain = chain.Append(hlog.AccessHandler(accessLogger))
@@ -138,6 +137,20 @@ func newHandlerChain(log zerolog.Logger, cfg *config.ConfigRoot) alice.Chain {
 		chain = chain.Append(cachingHandlerGenerator(httpcache.NewMemoryCache()))
 	}
 	return chain
+}
+
+// proxyHeaderRewriteHandler is a partial reimplementation of gorilla toolkit's
+// handlers.ProxyHeaders that _only_ looks at X-Forwarded-Host. Rewriting the other
+// headers seem to break matching in gorilla mux, even with the route.Schemes(...)
+// set to ["http", "https"].
+func proxyHeaderRewriteHandler(next http.Handler) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		if v := r.Header.Get(http.CanonicalHeaderKey("X-Forwarded-Host")); v != "" {
+			r.Host = v
+		}
+		next.ServeHTTP(w, r)
+	}
+	return http.HandlerFunc(fn)
 }
 
 func timeoutHandler(dt time.Duration, msg string) func(http.Handler) http.Handler {
