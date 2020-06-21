@@ -1,0 +1,14 @@
+logsBucket: 'gcb-logs-$PROJECT_ID'
+
+images:
+  - 'gcr.io/$PROJECT_ID/ssp:commit-$SHORT_SHA'
+
+steps:
+
+  - id: Build
+    name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/ssp:commit-$SHORT_SHA', '--build-arg', 'PROJECT_ID=$PROJECT_ID', '-f', 'Dockerfile', '.']
+
+  - id: Push
+    name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/ssp:commit-$SHORT_SHA']
