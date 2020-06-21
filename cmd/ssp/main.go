@@ -30,7 +30,7 @@ func main() {
 
 	r := mux.NewRouter()
 	r.Path("/healthz").HandlerFunc(healthzHandler)
-	r.NotFoundHandler = http.NotFoundHandler()
+	r.NotFoundHandler = unknownHostHandler()
 
 	if opts.Config != "" {
 		cfg, err := config.Load(opts.Config)
@@ -102,5 +102,12 @@ func newHandlerChain(log zerolog.Logger, opts options) alice.Chain {
 func timeoutHandler(dt time.Duration, msg string) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.TimeoutHandler(h, dt, msg)
+	}
+}
+
+func unknownHostHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		msg := fmt.Sprintf("404 unknown route handler for host %s", r.Host)
+		http.Error(w, msg, http.StatusNotFound)
 	}
 }
