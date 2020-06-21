@@ -123,7 +123,7 @@ func timeoutHandler(dt time.Duration, msg string) func(http.Handler) http.Handle
 
 func unknownHostHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		msg := fmt.Sprintf("404 unknown route handler for host %s", r.Host)
+		msg := fmt.Sprintf("404 unknown route handler for host %q", r.Host)
 		http.Error(w, msg, http.StatusNotFound)
 	}
 }
