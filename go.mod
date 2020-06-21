@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	cloud.google.com/go v0.58.0
+	cloud.google.com/go/storage v1.8.0
 	github.com/alexflint/go-arg v0.0.0-20171003000717-59fccacb2679
 	github.com/alexflint/go-scalar v0.0.0-20170216020425-e80c3b7ed292
 	github.com/aws/aws-sdk-go v1.12.56
