@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -36,6 +37,13 @@ type ConfigHandler struct {
 type ConfigRoot struct {
 	Defaults *ConfigHandler   `json:"defaults" yaml:"defaults"`
 	Handlers []*ConfigHandler `json:"handlers" yaml:"handlers"`
+
+	Proxy ProxySettings `json:"proxy_settings,omitempty" yaml:"proxy_settings,omitempty"`
+}
+
+type ProxySettings struct {
+	TimeoutDuration       *time.Duration `json:"timeout_duration,omitempty" yaml:"timeout_duration,omitempty"`
+	TrustForwardedHeaders *bool          `json:"trust_forwarded_headers,omitempty" yaml:"trust_forwarded_headers,omitempty"`
 }
 
 func Load(filename string) (*ConfigRoot, error) {
