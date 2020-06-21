@@ -1,9 +1,9 @@
 module github.com/ripta/ssp
 
-go 1.12
+go 1.14
 
 require (
-	cloud.google.com/go v0.40.0
+	cloud.google.com/go v0.58.0
 	github.com/alexflint/go-arg v0.0.0-20171003000717-59fccacb2679
 	github.com/alexflint/go-scalar v0.0.0-20170216020425-e80c3b7ed292
 	github.com/aws/aws-sdk-go v1.12.56
@@ -20,7 +20,7 @@ require (
 	github.com/rs/xid v0.0.0-20170604230408-02dd45c33376
 	github.com/rs/zerolog v1.3.0
 	github.com/zenazn/goji v0.0.0-20160507202103-64eb34159fe5
-	golang.org/x/tools v0.0.0-20190610231749-f8d1dee965f7 // indirect
-	google.golang.org/api v0.6.0
-	gopkg.in/yaml.v2 v2.0.0-20180104195722-0e4404da7122
+	golang.org/x/tools v0.0.0-20200619210111-0f592d2728bb // indirect
+	google.golang.org/api v0.26.0
+	gopkg.in/yaml.v2 v2.2.2
 )
