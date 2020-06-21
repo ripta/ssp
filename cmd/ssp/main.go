@@ -94,7 +94,11 @@ func newHandlerChain(log zerolog.Logger, cfg *config.ConfigRoot) alice.Chain {
 	)
 
 	// Enforce a timeout on anything further in the chain
-	chain = chain.Append(timeoutHandler(10*time.Second, "timed out"))
+	d := 10 * time.Second
+	if t := cfg.Proxy.TimeoutDuration; t != nil {
+		d = *t
+	}
+	chain = chain.Append(timeoutHandler(d, "timed out"))
 
 	// In-memory caching is optional
 	if e := cfg.Cache.Enable; e != nil && *e {
