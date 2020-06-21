@@ -19,6 +19,11 @@ var (
 	reVarSubsitution = regexp.MustCompile("\\{[^}]+\\}")
 )
 
+type CacheSettings struct {
+	Enable       *bool `json:"enable,omitempty" yaml:"enable,omitempty"`
+	MaxSizeBytes int64 `json:"max_size_bytes,omitempty" yaml:"max_size_bytes,omitempty"`
+}
+
 type ConfigHandler struct {
 	Host       string `json:"host,omitempty" yaml:"host,omitempty"`
 	Path       string `json:"path,omitempty" yaml:"path,omitempty"`
@@ -38,6 +43,7 @@ type ConfigRoot struct {
 	Defaults *ConfigHandler   `json:"defaults" yaml:"defaults"`
 	Handlers []*ConfigHandler `json:"handlers" yaml:"handlers"`
 
+	Cache CacheSettings `json:"cache_settings,omitempty" yaml:"cache_settings,omitempty"`
 	Proxy ProxySettings `json:"proxy_settings,omitempty" yaml:"proxy_settings,omitempty"`
 }
 

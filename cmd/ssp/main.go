@@ -32,26 +32,28 @@ func main() {
 	r.Path("/healthz").HandlerFunc(healthzHandler)
 	r.NotFoundHandler = unknownHostHandler()
 
-	if opts.Config != "" {
-		cfg, err := config.Load(opts.Config)
-		if err != nil {
-			log.Fatal().Err(err).Str("config_file", opts.Config).Msg("could not load config")
-		}
+	if opts.Config == "" {
+		log.Fatal().Msg("config must not be empty")
+	}
 
-		for _, ch := range cfg.Handlers {
-			rl := log.With().Interface("route", ch).Logger()
-			if err := ch.InjectRoute(r); err != nil {
-				log.Fatal().Err(err).Msg("route could not be installed")
-			} else {
-				rl.Debug().Msg("route installed")
-			}
+	cfg, err := config.Load(opts.Config)
+	if err != nil {
+		log.Fatal().Err(err).Str("config_file", opts.Config).Msg("could not load config")
+	}
+
+	for _, ch := range cfg.Handlers {
+		rl := log.With().Interface("route", ch).Logger()
+		if err := ch.InjectRoute(r); err != nil {
+			log.Fatal().Err(err).Msg("route could not be installed")
+		} else {
+			rl.Debug().Msg("route installed")
 		}
 	}
 
 	port := strconv.Itoa(opts.Port)
 	log.Info().Msg(fmt.Sprintf("Ready to serve requests on port %s", port))
 
-	chain := newHandlerChain(log, opts)
+	chain := newHandlerChain(log, cfg)
 	if err := http.ListenAndServe(":"+port, chain.Then(r)); err != nil {
 		log.Fatal().Err(err).Msg("cannot listen")
 	}
@@ -77,9 +79,10 @@ func healthzHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "ok")
 }
 
-func newHandlerChain(log zerolog.Logger, opts options) alice.Chain {
+func newHandlerChain(log zerolog.Logger, cfg *config.ConfigRoot) alice.Chain {
 	// Inject the logging device as early as possible in the chain
 	chain := alice.New(hlog.NewHandler(log), hlog.AccessHandler(accessLogger))
+
 	// Add all handlers that inject further information for the access logger
 	chain = chain.Append(
 		hlog.MethodHandler("method"),
@@ -89,10 +92,12 @@ func newHandlerChain(log zerolog.Logger, opts options) alice.Chain {
 		hlog.URLHandler("path"),
 		hlog.UserAgentHandler("user_agent"),
 	)
+
 	// Enforce a timeout on anything further in the chain
 	chain = chain.Append(timeoutHandler(10*time.Second, "timed out"))
+
 	// In-memory caching is optional
-	if opts.UseCache {
+	if e := cfg.Cache.Enable; e != nil && *e {
 		log.Info().Msg("Enabled in-memory cache")
 		chain = chain.Append(cachingHandlerGenerator(httpcache.NewMemoryCache()))
 	}
