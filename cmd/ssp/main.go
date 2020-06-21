@@ -82,7 +82,7 @@ func healthzHandler(w http.ResponseWriter, r *http.Request) {
 
 func newHandlerChain(log zerolog.Logger, cfg *config.ConfigRoot) alice.Chain {
 	// Inject the logging device as early as possible in the chain
-	chain := alice.New(hlog.NewHandler(log), hlog.AccessHandler(accessLogger))
+	chain := alice.New(hlog.NewHandler(log))
 
 	// Add all handlers that inject further information for the access logger
 	chain = chain.Append(
@@ -94,16 +94,18 @@ func newHandlerChain(log zerolog.Logger, cfg *config.ConfigRoot) alice.Chain {
 		hlog.UserAgentHandler("user_agent"),
 	)
 
+	if h := cfg.Proxy.TrustForwardedHeaders; h != nil && *h {
+		chain = chain.Append(handlers.ProxyHeaders)
+	}
+
+	chain = chain.Append(hlog.AccessHandler(accessLogger))
+
 	// Enforce a timeout on anything further in the chain
 	d := 10 * time.Second
 	if t := cfg.Proxy.TimeoutDuration; t != nil {
 		d = *t
 	}
 	chain = chain.Append(timeoutHandler(d, "timed out"))
-
-	if h := cfg.Proxy.TrustForwardedHeaders; h != nil && *h {
-		chain = chain.Append(handlers.ProxyHeaders)
-	}
 
 	// In-memory caching is optional
 	if e := cfg.Cache.Enable; e != nil && *e {
