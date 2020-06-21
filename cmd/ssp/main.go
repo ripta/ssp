@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"runtime/debug"
 	"strconv"
 	"time"
 
@@ -30,10 +31,6 @@ func main() {
 		log.Info().Msgf("ssp %s (built %s)", version, BuildDate)
 	}
 
-	r := mux.NewRouter()
-	r.Path("/healthz").HandlerFunc(healthzHandler)
-	r.NotFoundHandler = unknownHostHandler()
-
 	if opts.Config == "" {
 		log.Fatal().Msg("config must not be empty")
 	}
@@ -41,6 +38,14 @@ func main() {
 	cfg, err := config.Load(opts.Config)
 	if err != nil {
 		log.Fatal().Err(err).Str("config_file", opts.Config).Msg("could not load config")
+	}
+
+	r := mux.NewRouter()
+	r.Path("/healthz").HandlerFunc(healthzHandler)
+	r.NotFoundHandler = unknownHostHandler(cfg.Debug)
+
+	if cfg.Debug {
+		r.Path("/modulesz").HandlerFunc(debugModuleHandler)
 	}
 
 	for _, ch := range cfg.Handlers {
@@ -74,6 +79,24 @@ func cachingHandlerGenerator(c httpcache.Cache) func(http.Handler) http.Handler 
 	return func(h http.Handler) http.Handler {
 		return httpcache.NewHandler(c, h)
 	}
+}
+
+func debugModuleHandler(w http.ResponseWriter, r *http.Request) {
+	bi, ok := debug.ReadBuildInfo()
+	if !ok {
+		http.Error(w, "build info not available", http.StatusNoContent)
+		return
+	}
+
+	p, err := yaml.Marshal(bi)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(p)
+	return
 }
 
 func healthzHandler(w http.ResponseWriter, r *http.Request) {
@@ -122,8 +145,13 @@ func timeoutHandler(dt time.Duration, msg string) func(http.Handler) http.Handle
 	}
 }
 
-func unknownHostHandler() http.HandlerFunc {
+func unknownHostHandler(debug bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if !debug {
+			http.Error(w, fmt.Sprintf("404 unknown route handler for host %q", r.Host), http.StatusNotFound)
+			return
+		}
+
 		p, _ := yaml.Marshal(r.Header)
 		msg := fmt.Sprintf("404 unknown route handler for host %q:\n---\n%s", r.Host, string(p))
 		http.Error(w, msg, http.StatusNotFound)

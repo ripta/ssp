@@ -44,6 +44,8 @@ type ConfigRoot struct {
 
 	Cache CacheSettings `json:"cache_settings,omitempty" yaml:"cache_settings,omitempty"`
 	Proxy ProxySettings `json:"proxy_settings,omitempty" yaml:"proxy_settings,omitempty"`
+
+	Debug bool `json:"debug,omitempty" yaml:"debug,omitempty"`
 }
 
 type ProxySettings struct {
