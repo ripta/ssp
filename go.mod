@@ -13,7 +13,7 @@ require (
 	github.com/go-ini/ini v1.32.0
 	github.com/gorilla/context v0.0.0-20160226214623-1ea25387ff6f
 	github.com/gorilla/handlers v1.4.2
-	github.com/gorilla/mux v1.6.0
+	github.com/gorilla/mux v1.7.4
 	github.com/jmespath/go-jmespath v0.0.0-20160202185014-0b12d6b521d8
 	github.com/justinas/alice v0.0.0-20171023064455-03f45bd4b7da
 	github.com/lox/httpcache v1.2.0
