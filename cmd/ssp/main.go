@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
 	"github.com/lox/httpcache"
@@ -99,6 +100,10 @@ func newHandlerChain(log zerolog.Logger, cfg *config.ConfigRoot) alice.Chain {
 		d = *t
 	}
 	chain = chain.Append(timeoutHandler(d, "timed out"))
+
+	if h := cfg.Proxy.TrustForwardedHeaders; h != nil && *h {
+		chain = chain.Append(handlers.ProxyHeaders)
+	}
 
 	// In-memory caching is optional
 	if e := cfg.Cache.Enable; e != nil && *e {
