@@ -20,8 +20,7 @@ var (
 )
 
 type CacheSettings struct {
-	Enable       *bool `json:"enable,omitempty" yaml:"enable,omitempty"`
-	MaxSizeBytes int64 `json:"max_size_bytes,omitempty" yaml:"max_size_bytes,omitempty"`
+	Enable *bool `json:"enable,omitempty" yaml:"enable,omitempty"`
 }
 
 type ConfigHandler struct {
