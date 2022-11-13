@@ -1,5 +1,3 @@
-logsBucket: 'gcb-logs-$PROJECT_ID'
-
 images:
   - 'gcr.io/$PROJECT_ID/ssp:commit-$SHORT_SHA'
 
