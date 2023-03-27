@@ -3,7 +3,7 @@ module github.com/ripta/ssp
 go 1.19
 
 require (
-	cloud.google.com/go/storage v1.30.0
+	cloud.google.com/go/storage v1.30.1
 	github.com/alexflint/go-arg v1.4.3
 	github.com/aws/aws-sdk-go v1.44.224
 	github.com/aws/aws-sdk-go-v2 v2.0.0-preview.4+incompatible
@@ -42,7 +42,7 @@ require (
 	golang.org/x/text v0.8.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4 // indirect
+	google.golang.org/genproto v0.0.0-20230320184635-7606e756e683 // indirect
 	google.golang.org/grpc v1.53.0 // indirect
 	google.golang.org/protobuf v1.29.1 // indirect
 )
