@@ -13,7 +13,7 @@ require (
 	github.com/lox/httpcache v1.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.29.1
-	google.golang.org/api v0.119.0
+	google.golang.org/api v0.120.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
