@@ -12,7 +12,7 @@ require (
 	github.com/justinas/alice v1.2.0
 	github.com/lox/httpcache v1.2.0
 	github.com/pkg/errors v0.9.1
-	github.com/rs/zerolog v1.29.1
+	github.com/rs/zerolog v1.30.0
 	google.golang.org/api v0.134.0
 	gopkg.in/yaml.v2 v2.4.0
 )
@@ -35,7 +35,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/rainycape/vfs v0.0.0-20170722131704-164487ec47b4 // indirect
-	github.com/rs/xid v1.4.0 // indirect
+	github.com/rs/xid v1.5.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/crypto v0.11.0 // indirect
 	golang.org/x/net v0.12.0 // indirect
