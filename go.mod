@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go v1.47.3
 	github.com/aws/aws-sdk-go-v2 v2.0.0-preview.4+incompatible
 	github.com/davecgh/go-spew v1.1.1
-	github.com/gorilla/mux v1.8.0
+	github.com/gorilla/mux v1.8.1
 	github.com/justinas/alice v1.2.0
 	github.com/lox/httpcache v1.2.0
 	github.com/pkg/errors v0.9.1
