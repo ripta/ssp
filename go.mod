@@ -5,7 +5,7 @@ go 1.19
 require (
 	cloud.google.com/go/storage v1.41.0
 	github.com/alexflint/go-arg v1.5.0
-	github.com/aws/aws-sdk-go v1.53.10
+	github.com/aws/aws-sdk-go v1.54.0
 	github.com/aws/aws-sdk-go-v2 v2.0.0-preview.4+incompatible
 	github.com/davecgh/go-spew v1.1.1
 	github.com/gorilla/mux v1.8.1
