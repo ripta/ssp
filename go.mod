@@ -12,7 +12,7 @@ require (
 	github.com/justinas/alice v1.2.0
 	github.com/lox/httpcache v1.2.0
 	github.com/pkg/errors v0.9.1
-	github.com/rs/zerolog v1.32.0
+	github.com/rs/zerolog v1.33.0
 	google.golang.org/api v0.183.0
 	gopkg.in/yaml.v2 v2.4.0
 )
