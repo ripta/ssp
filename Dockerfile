@@ -1,4 +1,4 @@
-FROM golang:1.19-bullseye AS builder
+FROM golang:1.22-bookworm AS builder
 
 ENV CGO_ENABLED=0
 ENV GO111MODULE=on
@@ -15,7 +15,7 @@ COPY . .
 RUN go build -v -ldflags "-s -w -X main.BuildVersion=$VERSION -X main.BuildDate=$BUILD_DATE -X main.BuildEnvironment=prod" -o bin/ssp ./cmd/ssp
 
 
-FROM debian:bullseye
+FROM debian:bookworm
 COPY --from=builder /app/bin/ssp /app/bin/ssp
 COPY examples/userdir.yaml /app/config.yaml
 ENTRYPOINT ["/app/bin/ssp"]
