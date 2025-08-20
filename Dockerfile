@@ -16,6 +16,10 @@ RUN go build -v -ldflags "-s -w -X main.BuildVersion=$VERSION -X main.BuildDate=
 
 
 FROM debian:bookworm
+RUN apt update \
+  && apt install -y ca-certificates \
+  && apt clean
+USER nobody
 COPY --from=builder /app/bin/ssp /app/bin/ssp
 COPY examples/userdir.yaml /app/config.yaml
 ENTRYPOINT ["/app/bin/ssp"]
