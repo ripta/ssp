@@ -1,2 +1,4 @@
-bin/
-vendor/
+/.idea/
+/bin/
+/examples/local.yaml
+/vendor/
