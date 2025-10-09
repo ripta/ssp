@@ -48,10 +48,7 @@ func newClient(ctx context.Context, keyFile string) (*storage.Client, error) {
 }
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	path := r.URL.Path
-	if path != "/" {
-		path = strings.TrimPrefix(path, "/")
-	}
+	path := strings.TrimPrefix(r.URL.Path, "/")
 
 	log := hlog.FromRequest(r)
 	log.UpdateContext(func(c zerolog.Context) zerolog.Context {
@@ -60,7 +57,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Str("gcs_key", path)
 	})
 
-	if strings.HasSuffix(path, "/") {
+	if path == "" || strings.HasSuffix(path, "/") {
 		var foundPath string
 		for _, candidate := range h.Options.IndexFiles {
 			if h.hasObject(r, path+candidate) {
@@ -68,6 +65,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				break
 			}
 		}
+
 		if foundPath == "" {
 			if h.Options.Autoindex != nil && *h.Options.Autoindex {
 				if path == "/" {
@@ -82,6 +80,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		path = foundPath
 	}
+
 	h.serveFile(w, r, path)
 }
 
