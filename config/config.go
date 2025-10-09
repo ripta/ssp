@@ -60,7 +60,7 @@ func Load(filename string) (*ConfigRoot, error) {
 	}
 
 	cfg := &ConfigRoot{}
-	if err := yaml.Unmarshal(data, cfg); err != nil {
+	if err := yaml.UnmarshalStrict(data, cfg); err != nil {
 		return nil, err
 	}
 
