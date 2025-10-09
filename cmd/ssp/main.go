@@ -135,6 +135,9 @@ func newHandlerChain(log zerolog.Logger, cfg *config.ConfigRoot) alice.Chain {
 	if e := cfg.Cache.Enable; e != nil && *e {
 		log.Info().Msg("Enabled in-memory cache")
 		chain = chain.Append(cachingHandlerGenerator(httpcache.NewMemoryCache()))
+		if cfg.Debug {
+			httpcache.DebugLogging = true
+		}
 	}
 	return chain
 }
