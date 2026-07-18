@@ -119,7 +119,7 @@ func (ch *ConfigHandler) InjectRoute(r *mux.Router) error {
 			return errors.Wrap(err, "could not initialize S3 request handler")
 		}
 		if ch.S3Prefix != "" {
-			h = ch.rewriteHandler(h)
+			h = ch.rewriteHandler(h, ch.S3Prefix)
 		}
 		ch.buildRoute(r).Handler(h)
 	}
@@ -129,7 +129,7 @@ func (ch *ConfigHandler) InjectRoute(r *mux.Router) error {
 			return errors.Wrap(err, "could not initialize GCS request handler")
 		}
 		if ch.GCSPrefix != "" {
-			h = ch.rewriteHandler(h)
+			h = ch.rewriteHandler(h, ch.GCSPrefix)
 		}
 		ch.buildRoute(r).Handler(h)
 	}
@@ -149,7 +149,7 @@ func (ch *ConfigHandler) buildRoute(r *mux.Router) *mux.Route {
 	return rt.Methods("GET")
 }
 
-func (ch *ConfigHandler) rewriteHandler(h http.Handler) http.Handler {
+func (ch *ConfigHandler) rewriteHandler(h http.Handler, prefix string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// rewrite path
 		p := req.URL.Path
@@ -157,7 +157,7 @@ func (ch *ConfigHandler) rewriteHandler(h http.Handler) http.Handler {
 		if ch.PathPrefix != "" {
 			p = strings.TrimPrefix(p, substituteParams(ch.PathPrefix, v))
 		}
-		p = substituteParams(ch.S3Prefix, v) + p
+		p = substituteParams(prefix, v) + p
 
 		// deep copy the request so we can reinject the rewritten path
 		req = req.WithContext(req.Context())
