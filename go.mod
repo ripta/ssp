@@ -3,7 +3,7 @@ module github.com/ripta/ssp
 go 1.25.0
 
 require (
-	cloud.google.com/go/storage v1.63.1
+	cloud.google.com/go/storage v1.64.0
 	github.com/alexflint/go-arg v1.6.1
 	github.com/aws/aws-sdk-go v1.55.8
 	github.com/aws/aws-sdk-go-v2 v2.0.0-preview.4+incompatible
@@ -13,7 +13,7 @@ require (
 	github.com/lox/httpcache v1.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.35.1
-	google.golang.org/api v0.289.0
+	google.golang.org/api v0.290.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
